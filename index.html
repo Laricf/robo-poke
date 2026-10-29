@@ -19,7 +19,6 @@
     image-rendering: pixelated;
     border: 4px solid #0f3460;
     border-radius: 8px;
-    /* Ajuste para telas menores */
     max-width: 95vw;
     max-height: 80vh;
   }
@@ -81,24 +80,24 @@ const MAP_H = 11;
 canvas.width  = MAP_W * TILE;
 canvas.height = MAP_H * TILE;
 
-// ===== NOVO MAPA CORRIGIDO =====
+// ===== MAPA CONECTADO =====
 // 0 = chão livre, 1 = parede
-// Caminho contínuo do topo esquerdo até o canto inferior direito.
+// O caminho livre forma um "S" contínuo do canto superior esquerdo até o inferior direito.
 const MAP = [
   [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-  [1,0,0,0,0,0,1,1,1,1,1,1,1,1,1],
-  [1,0,1,1,1,0,0,0,0,0,1,1,1,1,1],
-  [1,0,1,1,1,1,1,1,1,0,0,0,0,1,1],
-  [1,0,0,0,0,0,0,0,1,1,1,1,0,0,1],
-  [1,1,1,1,1,1,1,0,0,0,0,1,1,0,1],
-  [1,0,0,0,0,0,0,0,1,1,0,0,0,0,1],
-  [1,0,1,1,1,1,1,1,1,1,1,1,1,0,1],
   [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  [1,1,1,1,1,1,1,1,1,1,1,1,1,0,1],
+  [1,1,1,1,1,1,1,1,1,1,1,1,0,1,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,1,1],
+  [1,0,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,1,1,1,1,1,1,1,1,1,1,1,0,1,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,1,1],
+  [1,0,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
   [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ];
 
-// ===== Jogador =====
+// ===== Jogador (Começa na linha 1, coluna 1) =====
 const START_COL = 1;
 const START_ROW = 1;
 
@@ -110,9 +109,9 @@ const player = {
   dir: 'down'
 };
 
-// ===== Alvo (Pokébola) =====
+// ===== Alvo (Pokébola na linha 9, coluna 13) =====
 const TARGET_COL = 13;
-const TARGET_ROW = 8;
+const TARGET_ROW = 9;
 
 const target = {
   x: TARGET_COL * TILE + TILE / 2,
@@ -196,7 +195,7 @@ function drawMap() {
   for (let row = 0; row < MAP_H; row++) {
     for (let col = 0; col < MAP_W; col++) {
       if (MAP[row][col] === 1) {
-        ctx.fillStyle = '#3a6b2a'; // Parede escura
+        ctx.fillStyle = '#2d5a1e'; // Parede escura (bem escura para destacar)
       } else {
         ctx.fillStyle = (row + col) % 2 === 0 ? '#8fd45a' : '#83c94f'; // Grama
       }
