@@ -217,9 +217,11 @@ sprites.charmander.src = "https://raw.githubusercontent.com/PokeAPI/sprites/mast
 sprites.bulbasaur.src = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/1.png";
 sprites.zubat.src = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/41.png";
 sprites.koffing.src = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/109.png";
-// Sprites da Equipe Rocket (Overworld)
-sprites.jessie.src = "https://raw.githubusercontent.com/msikma/pokesprite/master/items/outfit/jessie.png";
-sprites.james.src = "https://raw.githubusercontent.com/msikma/pokesprite/master/items/outfit/james.png";
+
+// Sprites do Overworld da Equipe Rocket (via sprites do jogo Pokémon FireRed)
+sprites.jessie.src = "https://play.pokemonshowdown.com/sprites/trainers/jessie.png";
+sprites.james.src = "https://play.pokemonshowdown.com/sprites/trainers/james.png";
+
 sprites.pokeball.src = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-ball.png";
 sprites.goldball.src = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/master-ball.png";
 
@@ -228,7 +230,7 @@ let currentLevel = 1;
 let MAP = [];
 let items = [];
 let enemies = []; // Andam aleatoriamente (Zubat, Koffing)
-let rockets = []; // Ficam parados patrulhando (Jessie, James)
+let rockets = []; // Patrulham os corredores (Jessie, James)
 let player = { x: 0, y: 0, r: 12, speed: 2.6, dir: 'down', animTimer: 0, invulnerable: false };
 let target = { x: 0, y: 0, r: 14, active: false };
 let keys = {};
@@ -250,6 +252,15 @@ function nextLevel() {
   currentLevel++;
   document.getElementById('level').innerText = currentLevel;
   generateMaze();
+}
+
+// ===== Helper: Verifica se uma célula está no caminho principal (início ou fim) =====
+function isSafeForRocket(c, r) {
+  if (r === 1 && c === 1) return false; // Início do jogador
+  if (r === MAP_H - 2 && c === MAP_W - 2) return false; // Fim da pokébola
+  // Não colocar na primeira linha ou coluna (caminho do jogador)
+  if (r === 1 || c === 1) return false; 
+  return true;
 }
 
 function generateMaze() {
@@ -292,6 +303,7 @@ function generateMaze() {
   target.y = (MAP_H - 2) * TILE + TILE / 2;
   target.active = false;
 
+  // Coletar células livres
   const emptyCells = [];
   for (let r = 1; r < MAP_H - 1; r++) {
     for (let c = 1; c < MAP_W - 1; c++) {
@@ -302,7 +314,7 @@ function generateMaze() {
   }
   emptyCells.sort(() => Math.random() - 0.5);
 
-  // Pokébolas
+  // Pokébolas (prioridade nas primeiras células)
   items = [];
   const numItems = Math.min(3 + (currentLevel - 1), Math.floor(emptyCells.length / 2));
   for (let i = 0; i < numItems; i++) {
@@ -313,7 +325,7 @@ function generateMaze() {
     });
   }
   
-  // Pokémons Selvagens (andam)
+  // Pokémons Selvagens (andam aleatoriamente)
   enemies = [];
   const numEnemies = Math.min(1 + Math.floor(currentLevel / 2), 3);
   const enemyTypes = ['zubat', 'koffing'];
@@ -329,16 +341,24 @@ function generateMaze() {
     }
   }
 
-  // Equipe Rocket (patrulham parados)
+  // Equipe Rocket (Patrulha nos corredores)
   rockets = [];
   const numRockets = Math.min(Math.floor(currentLevel / 2), 2);
+  let rocketCells = emptyCells.filter(cell => isSafeForRocket(cell.c, cell.r));
+  
+  // Embaralha as células seguras e escolhe
+  rocketCells.sort(() => Math.random() - 0.5);
+  
   for (let i = 0; i < numRockets; i++) {
-    const cell = emptyCells[Math.floor(emptyCells.length / 2) + i];
+    const cell = rocketCells[i];
     if (cell) {
       rockets.push({
-        x: cell.c * TILE + TILE / 2, y: cell.r * TILE + TILE / 2, r: 14,
+        x: cell.c * TILE + TILE / 2, 
+        y: cell.r * TILE + TILE / 2, 
+        r: 14,
         type: i % 2 === 0 ? 'jessie' : 'james',
-        dir: 1, // 1 = direita, -1 = esquerda
+        dir: Math.random() > 0.5 ? 1 : -1, // 1 = direita/baixo, -1 = esquerda/cima
+        isHorizontal: Math.random() > 0.5, // Se patrulha na horizontal ou vertical
         animTimer: Math.random() * 10
       });
     }
@@ -431,6 +451,8 @@ function update() {
     enemy.animTimer += 0.1;
     let nextX = enemy.x + (enemy.dirX * enemy.speed);
     let nextY = enemy.y + (enemy.dirY * enemy.speed);
+    
+    // Se bater na parede, inverte a direção e tenta mover de novo no mesmo frame
     if (collidesWithWall(nextX, enemy.y, enemy.r)) {
       enemy.dirX *= -1;
       nextX = enemy.x + (enemy.dirX * enemy.speed);
@@ -439,30 +461,34 @@ function update() {
       enemy.dirY *= -1;
       nextY = enemy.y + (enemy.dirY * enemy.speed);
     }
+    
     enemy.x = nextX;
     enemy.y = nextY;
   });
 
-  // Movimento da Equipe Rocket (Patrulha de um lado para o outro)
+  // Movimento da Equipe Rocket (Patrulha)
   rockets.forEach(rocket => {
     rocket.animTimer += 0.1;
-    // Eles andam 1 quadrado para frente e para trás
-    let nextX = rocket.x + (rocket.dir * 1.5);
-    
-    // Se bater na parede, vira
-    if (collidesWithWall(nextX, rocket.y, rocket.r)) {
-      rocket.dir *= -1;
-      nextX = rocket.x + (rocket.dir * 1.5);
-    }
-    
-    // Limitar a patrulha a 1 quadrado e meio de distância do ponto de origem
-    const originX = Math.round((rocket.x - TILE/2) / TILE) * TILE + TILE/2;
-    if (Math.abs(nextX - originX) > TILE * 1.5) {
-      rocket.dir *= -1;
-      nextX = rocket.x + (rocket.dir * 1.5);
+    const speed = 1.5;
+    let nextX = rocket.x;
+    let nextY = rocket.y;
+
+    if (rocket.isHorizontal) {
+      nextX = rocket.x + (rocket.dir * speed);
+      if (collidesWithWall(nextX, rocket.y, rocket.r)) {
+        rocket.dir *= -1;
+        nextX = rocket.x + (rocket.dir * speed);
+      }
+    } else {
+      nextY = rocket.y + (rocket.dir * speed);
+      if (collidesWithWall(rocket.x, nextY, rocket.r)) {
+        rocket.dir *= -1;
+        nextY = rocket.y + (rocket.dir * speed);
+      }
     }
 
     rocket.x = nextX;
+    rocket.y = nextY;
   });
 
   // Coleta de Pokébolas
@@ -542,7 +568,7 @@ function drawEnemies() {
 function drawRockets() {
   rockets.forEach(rocket => {
     const size = 36;
-    // Se o dir for -1 (andando pra esquerda), a imagem vira de lado
+    // Se o dir for -1, olha para a esquerda
     const flip = rocket.dir === -1;
     if (rocket.type === 'jessie') drawSprite(sprites.jessie, rocket.x, rocket.y, size, flip);
     else drawSprite(sprites.james, rocket.x, rocket.y, size, flip);
