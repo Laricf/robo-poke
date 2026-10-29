@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Poké-Robô</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #1a1a2e;
+    font-family: sans-serif;
+    overflow: hidden;
+    height: 100%;
+  }
+  #game {
+    display: block;
+    margin: 0 auto;
+    background: #7ec850; /* grama */
+    image-rendering: pixelated;
+  }
+  #hud {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    color: #fff;
+    font-size: 18px;
+    text-shadow: 1px 1px 2px #000;
+  }
+  #win {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0,0,0,0.85);
+    color: #ffd700;
+    padding: 30px 50px;
+    border-radius: 16px;
+    font-size: 28px;
+    text-align: center;
+    display: none;
+    border: 4px solid #ffd700;
+  }
+  #win button {
+    margin-top: 20px;
+    font-size: 20px;
+    padding: 10px 24px;
+    border-radius: 8px;
+    border: none;
+    background: #ffd700;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<div id="hud">Use as setas ⬆️⬇️⬅️➡️ para mover o Pikachu até a Pokébola!</div>
+
+<div id="win">
+  Você capturou o Pokémon! 🎉
+  <br>
+  <button onclick="resetGame()">Jogar de novo</button>
+</div>
+
+<canvas id="game"></canvas>
+
+<script>
+// ===== Configuração =====
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+
+const TILE = 40;          // tamanho de cada célula do mapa (px)
+const MAP_W = 15;         // largura do mapa em células
+const MAP_H = 11;         // altura do mapa em células
+
+canvas.width  = MAP_W * TILE;
+canvas.height = MAP_H * TILE;
+
+// Mapa: 0 = chão livre, 1 = parede
+// Você pode editar esse array para desenhar labirintos diferentes.
+const MAP = [
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,1,1,0,0,1,1,0,0,0,1,1,0,1],
+  [1,0,1,0,0,0,0,0,0,1,0,0,0,0,1],
+  [1,0,0,0,0,1,0,0,0,1,0,0,1,0,1],
+  [1,0,0,1,0,0,0,0,0,0,0,0,1,0,1],
+  [1,0,0,1,1,1,0,0,0,0,0,0,1,0,1],
+  [1,0,0,0,0,0,0,0,1,1,0,0,0,0,1],
+  [1,0,1,1,0,0,0,0,1,0,0,1,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+];
+
+// ===== Jogador =====
+const player = {
+  x: 2 * TILE + TILE / 2,   // posição em pixels (centro)
+  y: 2 * TILE + TILE / 2,
+  r: 12,                     // raio para colisão
+  speed: 2.2,                // pixels por frame (ajuste para mais rápido/devagar)
+  dir: 'down'
+};
+
+// ===== Pokébola (objetivo) =====
+const target = {
+  x: 12 * TILE + TILE / 2,
+  y: 8 * TILE + TILE / 2,
+  r: 14
+};
+
+// ===== Teclado =====
+const keys = {};
+window.addEventListener('keydown', e => {
+  keys[e.key] = true;
+  // evita scroll da página com as setas
+  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) {
+    e.preventDefault();
+  }
+});
+window.addEventListener('keyup', e => { keys[e.key] = false; });
+
+// ===== Colisão =====
+// Verifica se um círculo (cx, cy, r) toca alguma parede do mapa
+function collidesWithWall(cx, cy, r) {
+  // células que o círculo pode encostar
+  const minCol = Math.floor((cx - r) / TILE);
+  const maxCol = Math.floor((cx + r) / TILE);
+  const minRow = Math.floor((cy - r) / TILE);
+  const maxRow = Math.floor((cy + r) / TILE);
+
+  for (let row = minRow; row <= maxRow; row++) {
+    for (let col = minCol; col <= maxCol; col++) {
+      // fora do mapa conta como parede
+      if (row < 0 || row >= MAP_H || col < 0 || col >= MAP_W) return true;
+      if (MAP[row][col] === 1) {
+        // colisão círculo × retângulo
+        const rx = col * TILE, ry = row * TILE;
+        const nx = Math.max(rx, Math.min(cx, rx + TILE));
+        const ny = Math.max(ry, Math.min(cy, ry + TILE));
+        const dx = cx - nx, dy = cy - ny;
+        if (dx * dx + dy * dy < r * r) return true;
+      }
+    }
+  }
+  return false;
+}
+
+// ===== Movimento =====
+function update() {
+  let dx = 0, dy = 0;
+  if (keys['ArrowUp'])    dy -= 1;
+  if (keys['ArrowDown'])  dy += 1;
+  if (keys['ArrowLeft'])  dx -= 1;
+  if (keys['ArrowRight']) dx += 1;
+
+  if (dx !== 0 || dy !== 0) {
+    // normaliza diagonal para não ficar mais rápido
+    const len = Math.hypot(dx, dy);
+    dx = (dx / len) * player.speed;
+    dy = (dy / len) * player.speed;
+
+    // atualiza direção para desenhar o "olhar"
+    if (Math.abs(dx) > Math.abs(dy)) player.dir = dx > 0 ? 'right' : 'left';
+    else player.dir = dy > 0 ? 'down' : 'up';
+
+    // Move eixo X
+    if (!collidesWithWall(player.x + dx, player.y, player.r)) {
+      player.x += dx;
+    }
+    // Move eixo Y
+    if (!collidesWithWall(player.x, player.y + dy, player.r)) {
+      player.y += dy;
+    }
+  }
+
+  // Vitória
+  const distToTarget = Math.hypot(player.x - target.x, player.y - target.y);
+  if (distToTarget < player.r + target.r) {
+    showWin();
+  }
+}
+
+// ===== Desenho =====
+function draw() {
+  // chão
+  for (let row = 0; row < MAP_H; row++) {
+    for (let col = 0; col < MAP_W; col++) {
+      if (MAP[row][col] === 1) {
+        ctx.fillStyle = '#5a8a3a'; // parede (arbusto/rocha)
+      } else {
+        ctx.fillStyle = (row + col) % 2 === 0 ? '#8fd45a' : '#83c94f'; // grama xadrez suave
+      }
+      ctx.fillRect(col * TILE, row * TILE, TILE, TILE);
+    }
+  }
+
+  // Pokébola
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(target.x, target.y, target.r, 0, Math.PI * 2);
+  ctx.fillStyle = '#ff1c1c';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(target.x, target.y, target.r, Math.PI, 0);
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(target.x, target.y, target.r, 0, Math.PI * 2);
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  // faixa central
+  ctx.beginPath();
+  ctx.moveTo(target.x - target.r, target.y);
+  ctx.lineTo(target.x + target.r, target.y);
+  ctx.stroke();
+  // botão central
+  ctx.beginPath();
+  ctx.arc(target.x, target.y, 4, 0, Math.PI * 2);
+  ctx.fillStyle = '#fff';
+  ctx.fill();
+  ctx.strokeStyle = '#000';
+  ctx.stroke();
+  ctx.restore();
+
+  // Pikachu (simplificado, sem sprite externo)
+  ctx.save();
+  // corpo
+  ctx.beginPath();
+  ctx.arc(player.x, player.y, player.r, 0, Math.PI * 2);
+  ctx.fillStyle = '#ffe033';
+  ctx.fill();
+  ctx.strokeStyle = '#c9a800';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // olhos (mudam conforme a direção)
+  const eyeOffset = 5;
+  const eyeY = player.y - 3;
+  let eyeLX = player.x - 4, eyeRX = player.x + 4;
+  if (player.dir === 'left')  { eyeLX = player.x - 7; eyeRX = player.x - 1; }
+  if (player.dir === 'right') { eyeLX = player.x + 1; eyeRX = player.x + 7; }
+  if (player.dir === 'up')    { eyeLX = player.x - 4; eyeRX = player.x + 4; }
+
+  ctx.beginPath();
+  ctx.arc(eyeLX, eyeY, 2, 0, Math.PI * 2);
+  ctx.arc(eyeRX, eyeY, 2, 0, Math.PI * 2);
+  ctx.fillStyle = '#000';
+  ctx.fill();
+
+  // bochechas vermelhas
+  ctx.beginPath();
+  ctx.arc(player.x - 7, player.y + 3, 2.5, 0, Math.PI * 2);
+  ctx.arc(player.x + 7, player.y + 3, 2.5, 0, Math.PI * 2);
+  ctx.fillStyle = '#ff5555';
+  ctx.fill();
+
+  // orelhinhas
+  ctx.beginPath();
+  ctx.moveTo(player.x - 6, player.y - player.r + 2);
+  ctx.lineTo(player.x - 10, player.y - player.r - 8);
+  ctx.lineTo(player.x - 2, player.y - player.r + 2);
+  ctx.closePath();
+  ctx.fillStyle = '#ffe033';
+  ctx.fill();
+  ctx.strokeStyle = '#c9a800';
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(player.x + 6, player.y - player.r + 2);
+  ctx.lineTo(player.x + 10, player.y - player.r - 8);
+  ctx.lineTo(player.x + 2, player.y - player.r + 2);
+  ctx.closePath();
+  ctx.fillStyle = '#ffe033';
+  ctx.fill();
+  ctx.strokeStyle = '#c9a800';
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+// ===== Loop do jogo =====
+let winShown = false;
+let animationId;
+
+function loop() {
+  if (!winShown) update();
+  draw();
+  animationId = requestAnimationFrame(loop);
+}
+
+function showWin() {
+  winShown = true;
+  document.getElementById('win').style.display = 'block';
+}
+
+function resetGame() {
+  player.x = 2 * TILE + TILE / 2;
+  player.y = 2 * TILE + TILE / 2;
+  player.dir = 'down';
+  winShown = false;
+  document.getElementById('win').style.display = 'none';
+}
+
+loop();
+</script>
+</body>
+</html>
