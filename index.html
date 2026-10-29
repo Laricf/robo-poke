@@ -19,6 +19,9 @@
     image-rendering: pixelated;
     border: 4px solid #0f3460;
     border-radius: 8px;
+    /* Ajuste para telas menores */
+    max-width: 95vw;
+    max-height: 80vh;
   }
   #hud {
     text-align: center;
@@ -78,24 +81,24 @@ const MAP_H = 11;
 canvas.width  = MAP_W * TILE;
 canvas.height = MAP_H * TILE;
 
-// Mapa: 0 = chão livre, 1 = parede
-// Foi desenhado com um caminho contínuo do canto superior esquerdo
-// até o canto inferior direito.
+// ===== NOVO MAPA CORRIGIDO =====
+// 0 = chão livre, 1 = parede
+// Caminho contínuo do topo esquerdo até o canto inferior direito.
 const MAP = [
   [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-  [1,0,0,0,0,1,1,1,1,1,1,1,1,1,1],
-  [1,0,1,1,0,1,0,0,0,0,0,0,0,0,1],
-  [1,0,1,1,0,1,0,1,1,1,1,1,1,0,1],
-  [1,0,0,0,0,1,0,1,1,1,1,1,1,0,1],
-  [1,1,1,1,0,1,0,0,0,0,0,0,0,0,1],
-  [1,1,1,1,0,1,1,1,1,1,1,1,0,1,1],
-  [1,1,1,1,0,0,0,0,0,0,0,1,0,1,1],
-  [1,1,1,1,1,1,1,1,1,1,0,1,0,1,1],
-  [1,0,0,0,0,0,0,0,0,0,0,1,0,0,1],
+  [1,0,0,0,0,0,1,1,1,1,1,1,1,1,1],
+  [1,0,1,1,1,0,0,0,0,0,1,1,1,1,1],
+  [1,0,1,1,1,1,1,1,1,0,0,0,0,1,1],
+  [1,0,0,0,0,0,0,0,1,1,1,1,0,0,1],
+  [1,1,1,1,1,1,1,0,0,0,0,1,1,0,1],
+  [1,0,0,0,0,0,0,0,1,1,0,0,0,0,1],
+  [1,0,1,1,1,1,1,1,1,1,1,1,1,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,0,1],
   [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ];
 
-// ===== Jogador (começa em célula livre: col=1, row=1) =====
+// ===== Jogador =====
 const START_COL = 1;
 const START_ROW = 1;
 
@@ -107,10 +110,13 @@ const player = {
   dir: 'down'
 };
 
-// ===== Alvo (célula livre: col=13, row=9) =====
+// ===== Alvo (Pokébola) =====
+const TARGET_COL = 13;
+const TARGET_ROW = 8;
+
 const target = {
-  x: 13 * TILE + TILE / 2,
-  y: 9 * TILE + TILE / 2,
+  x: TARGET_COL * TILE + TILE / 2,
+  y: TARGET_ROW * TILE + TILE / 2,
   r: 14
 };
 
@@ -128,7 +134,7 @@ window.addEventListener('keyup', e => {
   keys[k] = false;
 });
 
-// ===== Colisão círculo × paredes =====
+// ===== Colisão =====
 function collidesWithWall(cx, cy, r) {
   const minCol = Math.floor((cx - r) / TILE);
   const maxCol = Math.floor((cx + r) / TILE);
@@ -171,17 +177,14 @@ function update() {
     if (Math.abs(dx) > Math.abs(dy)) player.dir = dx > 0 ? 'right' : 'left';
     else player.dir = dy > 0 ? 'down' : 'up';
 
-    // Move eixo X
     if (!collidesWithWall(player.x + dx, player.y, player.r)) {
       player.x += dx;
     }
-    // Move eixo Y
     if (!collidesWithWall(player.x, player.y + dy, player.r)) {
       player.y += dy;
     }
   }
 
-  // Vitória
   const distToTarget = Math.hypot(player.x - target.x, player.y - target.y);
   if (distToTarget < player.r + target.r) {
     showWin();
@@ -193,9 +196,9 @@ function drawMap() {
   for (let row = 0; row < MAP_H; row++) {
     for (let col = 0; col < MAP_W; col++) {
       if (MAP[row][col] === 1) {
-        ctx.fillStyle = '#5a8a3a';
+        ctx.fillStyle = '#3a6b2a'; // Parede escura
       } else {
-        ctx.fillStyle = (row + col) % 2 === 0 ? '#8fd45a' : '#83c94f';
+        ctx.fillStyle = (row + col) % 2 === 0 ? '#8fd45a' : '#83c94f'; // Grama
       }
       ctx.fillRect(col * TILE, row * TILE, TILE, TILE);
     }
@@ -205,28 +208,27 @@ function drawMap() {
 // ===== Desenho da Pokébola =====
 function drawTarget() {
   ctx.save();
-  // metade superior vermelha
   ctx.beginPath();
   ctx.arc(target.x, target.y, target.r, Math.PI, 0);
   ctx.fillStyle = '#ff1c1c';
   ctx.fill();
-  // metade inferior branca
+  
   ctx.beginPath();
   ctx.arc(target.x, target.y, target.r, 0, Math.PI);
   ctx.fillStyle = '#ffffff';
   ctx.fill();
-  // contorno
+  
   ctx.beginPath();
   ctx.arc(target.x, target.y, target.r, 0, Math.PI * 2);
   ctx.strokeStyle = '#000';
   ctx.lineWidth = 2;
   ctx.stroke();
-  // faixa central
+  
   ctx.beginPath();
   ctx.moveTo(target.x - target.r, target.y);
   ctx.lineTo(target.x + target.r, target.y);
   ctx.stroke();
-  // botão central
+  
   ctx.beginPath();
   ctx.arc(target.x, target.y, 4, 0, Math.PI * 2);
   ctx.fillStyle = '#fff';
@@ -240,8 +242,6 @@ function drawTarget() {
 // ===== Desenho do Pikachu =====
 function drawPlayer() {
   ctx.save();
-
-  // corpo
   ctx.beginPath();
   ctx.arc(player.x, player.y, player.r, 0, Math.PI * 2);
   ctx.fillStyle = '#ffe033';
@@ -250,7 +250,7 @@ function drawPlayer() {
   ctx.lineWidth = 2;
   ctx.stroke();
 
-  // orelhas
+  // Orelhas
   ctx.beginPath();
   ctx.moveTo(player.x - 6, player.y - player.r + 2);
   ctx.lineTo(player.x - 10, player.y - player.r - 8);
@@ -271,7 +271,7 @@ function drawPlayer() {
   ctx.strokeStyle = '#c9a800';
   ctx.stroke();
 
-  // olhos
+  // Olhos
   const eyeY = player.y - 3;
   let eyeLX = player.x - 4, eyeRX = player.x + 4;
   if (player.dir === 'left')  { eyeLX = player.x - 7; eyeRX = player.x - 1; }
@@ -284,7 +284,7 @@ function drawPlayer() {
   ctx.fillStyle = '#000';
   ctx.fill();
 
-  // bochechas vermelhas
+  // Bochechas
   ctx.beginPath();
   ctx.arc(player.x - 7, player.y + 3, 2.5, 0, Math.PI * 2);
   ctx.arc(player.x + 7, player.y + 3, 2.5, 0, Math.PI * 2);
