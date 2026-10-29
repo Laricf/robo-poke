@@ -17,7 +17,6 @@
     justify-content: center;
   }
   
-  /* Tela Inicial */
   #menu {
     text-align: center;
     color: white;
@@ -26,6 +25,7 @@
     border-radius: 20px;
     border: 4px solid #ffd700;
     box-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
+    z-index: 20;
   }
   #menu h1 {
     color: #ffd700;
@@ -48,24 +48,26 @@
     color: white;
     font-size: 20px;
     font-weight: bold;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
   }
   .char-btn:hover {
     transform: scale(1.1);
     border-color: #ffd700;
   }
   .char-btn img {
-    width: 100px;
-    height: 100px;
+    width: 96px;
+    height: 96px;
     image-rendering: pixelated;
-    display: block;
-    margin: 0 auto 10px auto;
+    margin-bottom: 10px;
   }
   
-  /* Área do Jogo */
   #game-area {
-    display: none; /* Escondido até escolher o personagem */
+    display: none;
     flex-direction: column;
     align-items: center;
+    position: relative;
   }
   
   #hud {
@@ -79,7 +81,7 @@
     align-items: center;
   }
   .hud-item {
-    background: rgba(0,0,0,0.5);
+    background: rgba(0,0,0,0.7);
     padding: 5px 15px;
     border-radius: 8px;
     border: 2px solid #0f3460;
@@ -91,12 +93,22 @@
     border-radius: 12px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     background: #7ec850;
+    overflow: hidden;
   }
   #game {
     display: block;
     image-rendering: pixelated;
     max-width: 95vw;
     max-height: 65vh;
+  }
+
+  #damage-overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(255, 0, 0, 0.5);
+    display: none;
+    pointer-events: none;
+    z-index: 5;
   }
   
   #win {
@@ -134,31 +146,30 @@
     color: #aaa;
     font-size: 16px;
     margin-top: 15px;
+    text-align: center;
   }
 </style>
 </head>
 <body>
 
-<!-- TELA INICIAL -->
 <div id="menu">
   <h1>Quem vai explorar hoje?</h1>
   <div class="characters">
     <button class="char-btn" onclick="startGame('pikachu')">
-      <img src="https://img.pokemondb.net/sprites/black-white/normal/pikachu.png" alt="Pikachu">
+      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png" alt="Pikachu">
       Pikachu
     </button>
     <button class="char-btn" onclick="startGame('charmander')">
-      <img src="https://img.pokemondb.net/sprites/black-white/normal/charmander.png" alt="Charmander">
+      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/4.png" alt="Charmander">
       Charmander
     </button>
     <button class="char-btn" onclick="startGame('bulbasaur')">
-      <img src="https://img.pokemondb.net/sprites/black-white/normal/bulbasaur.png" alt="Bulbasaur">
+      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/1.png" alt="Bulbasaur">
       Bulbasaur
     </button>
   </div>
 </div>
 
-<!-- ÁREA DO JOGO -->
 <div id="game-area">
   <div id="hud">
     <div class="hud-item" style="color:#00ffcc">Fase: <span id="level">1</span></div>
@@ -167,6 +178,7 @@
 
   <div id="game-container">
     <canvas id="game"></canvas>
+    <div id="damage-overlay"></div>
     <div id="win">
       🎉 Fase Concluída! 🎉
       <br>
@@ -174,11 +186,10 @@
     </div>
   </div>
 
-  <div class="instrucoes">Use as setas do teclado para mover e pegar as Pokébolas.</div>
+  <div class="instrucoes">Cuidado com os vilões! Fuja da Equipe Rocket e dos Pokémons selvagens.</div>
 </div>
 
 <script>
-// ===== Configuração =====
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 const TILE = 40;
@@ -188,12 +199,37 @@ const MAP_H = 11;
 canvas.width  = MAP_W * TILE;
 canvas.height = MAP_H * TILE;
 
-// ===== Estado Global =====
+// ===== Imagens =====
+const sprites = {
+  pikachu: new Image(),
+  charmander: new Image(),
+  bulbasaur: new Image(),
+  zubat: new Image(),
+  koffing: new Image(),
+  jessie: new Image(),
+  james: new Image(),
+  pokeball: new Image(),
+  goldball: new Image()
+};
+
+sprites.pikachu.src = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png";
+sprites.charmander.src = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/4.png";
+sprites.bulbasaur.src = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/1.png";
+sprites.zubat.src = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/41.png";
+sprites.koffing.src = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/109.png";
+// Sprites da Equipe Rocket (Overworld)
+sprites.jessie.src = "https://raw.githubusercontent.com/msikma/pokesprite/master/items/outfit/jessie.png";
+sprites.james.src = "https://raw.githubusercontent.com/msikma/pokesprite/master/items/outfit/james.png";
+sprites.pokeball.src = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-ball.png";
+sprites.goldball.src = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/master-ball.png";
+
 let currentCharacter = 'pikachu';
 let currentLevel = 1;
 let MAP = [];
 let items = [];
-let player = { x: 0, y: 0, r: 12, speed: 2.6, dir: 'down', animTimer: 0 };
+let enemies = []; // Andam aleatoriamente (Zubat, Koffing)
+let rockets = []; // Ficam parados patrulhando (Jessie, James)
+let player = { x: 0, y: 0, r: 12, speed: 2.6, dir: 'down', animTimer: 0, invulnerable: false };
 let target = { x: 0, y: 0, r: 14, active: false };
 let keys = {};
 let score = 0;
@@ -201,43 +237,35 @@ let totalItems = 0;
 let winShown = false;
 let gameLoopId = null;
 
-// ===== Iniciar Jogo =====
 function startGame(character) {
   currentCharacter = character;
   currentLevel = 1;
-  
   document.getElementById('menu').style.display = 'none';
   document.getElementById('game-area').style.display = 'flex';
-  
   generateMaze();
   if (!gameLoopId) loop();
 }
 
-// ===== Próxima Fase =====
 function nextLevel() {
   currentLevel++;
   document.getElementById('level').innerText = currentLevel;
   generateMaze();
 }
 
-// ===== Gerador de Labirinto =====
 function generateMaze() {
   MAP = Array.from({ length: MAP_H }, () => Array(MAP_W).fill(1));
-  
   const stack = [];
   const startX = 1, startY = 1;
   MAP[startY][startX] = 0;
   stack.push({ x: startX, y: startY });
 
   const dirs = [
-    { dx: 0, dy: -2 }, { dx: 0, dy: 2 }, 
-    { dx: -2, dy: 0 }, { dx: 2, dy: 0 }
+    { dx: 0, dy: -2 }, { dx: 0, dy: 2 }, { dx: -2, dy: 0 }, { dx: 2, dy: 0 }
   ];
 
   while (stack.length > 0) {
     const current = stack[stack.length - 1];
     const neighbors = [];
-
     for (let d of dirs) {
       const nx = current.x + d.dx;
       const ny = current.y + d.dy;
@@ -245,7 +273,6 @@ function generateMaze() {
         neighbors.push({ x: nx, y: ny, px: current.x + d.dx / 2, py: current.y + d.dy / 2 });
       }
     }
-
     if (neighbors.length > 0) {
       const next = neighbors[Math.floor(Math.random() * neighbors.length)];
       MAP[next.py][next.px] = 0;
@@ -259,12 +286,12 @@ function generateMaze() {
   player.x = 1 * TILE + TILE / 2;
   player.y = 1 * TILE + TILE / 2;
   player.dir = 'down';
+  player.invulnerable = false;
   
   target.x = (MAP_W - 2) * TILE + TILE / 2;
   target.y = (MAP_H - 2) * TILE + TILE / 2;
   target.active = false;
 
-  // Dificuldade aumenta com a fase (mais pokébolas)
   const emptyCells = [];
   for (let r = 1; r < MAP_H - 1; r++) {
     for (let c = 1; c < MAP_W - 1; c++) {
@@ -273,19 +300,48 @@ function generateMaze() {
       }
     }
   }
-
   emptyCells.sort(() => Math.random() - 0.5);
+
+  // Pokébolas
   items = [];
-  // Fase 1 = 3 pokébolas, Fase 2 = 4, Fase 3 = 5...
-  const numItems = Math.min(3 + (currentLevel - 1), emptyCells.length);
-  
+  const numItems = Math.min(3 + (currentLevel - 1), Math.floor(emptyCells.length / 2));
   for (let i = 0; i < numItems; i++) {
     items.push({
       x: emptyCells[i].c * TILE + TILE / 2,
       y: emptyCells[i].r * TILE + TILE / 2,
-      r: 12,
-      collected: false
+      r: 12, collected: false
     });
+  }
+  
+  // Pokémons Selvagens (andam)
+  enemies = [];
+  const numEnemies = Math.min(1 + Math.floor(currentLevel / 2), 3);
+  const enemyTypes = ['zubat', 'koffing'];
+  for (let i = 0; i < numEnemies; i++) {
+    const cell = emptyCells[emptyCells.length - 1 - i];
+    if (cell) {
+      enemies.push({
+        x: cell.c * TILE + TILE / 2, y: cell.r * TILE + TILE / 2, r: 14,
+        type: enemyTypes[i % 2], animTimer: Math.random() * 10,
+        dirX: Math.random() > 0.5 ? 1 : -1, dirY: Math.random() > 0.5 ? 1 : -1,
+        speed: 1.2 + (currentLevel * 0.1)
+      });
+    }
+  }
+
+  // Equipe Rocket (patrulham parados)
+  rockets = [];
+  const numRockets = Math.min(Math.floor(currentLevel / 2), 2);
+  for (let i = 0; i < numRockets; i++) {
+    const cell = emptyCells[Math.floor(emptyCells.length / 2) + i];
+    if (cell) {
+      rockets.push({
+        x: cell.c * TILE + TILE / 2, y: cell.r * TILE + TILE / 2, r: 14,
+        type: i % 2 === 0 ? 'jessie' : 'james',
+        dir: 1, // 1 = direita, -1 = esquerda
+        animTimer: Math.random() * 10
+      });
+    }
   }
   
   totalItems = numItems;
@@ -296,7 +352,6 @@ function generateMaze() {
   document.getElementById('win').style.display = 'none';
 }
 
-// ===== Teclado =====
 window.addEventListener('keydown', e => {
   const k = e.code || e.key;
   keys[k] = true;
@@ -307,7 +362,6 @@ window.addEventListener('keyup', e => {
   keys[k] = false;
 });
 
-// ===== Colisão =====
 function collidesWithWall(cx, cy, r) {
   const minCol = Math.floor((cx - r) / TILE);
   const maxCol = Math.floor((cx + r) / TILE);
@@ -329,10 +383,27 @@ function collidesWithWall(cx, cy, r) {
   return false;
 }
 
-// ===== Update =====
+function takeDamage() {
+  player.invulnerable = true;
+  if (score > 0) {
+    score--;
+    document.getElementById('score').innerText = score;
+  }
+  
+  const overlay = document.getElementById('damage-overlay');
+  overlay.style.display = 'block';
+  setTimeout(() => overlay.style.display = 'none', 200);
+  
+  player.x = 1 * TILE + TILE / 2;
+  player.y = 1 * TILE + TILE / 2;
+  
+  setTimeout(() => { player.invulnerable = false; }, 1500);
+}
+
 function update() {
   if (winShown) return;
 
+  // Movimento do Jogador
   let dx = 0, dy = 0;
   if (keys['ArrowUp'])    dy -= 1;
   if (keys['ArrowDown'])  dy += 1;
@@ -355,7 +426,46 @@ function update() {
     player.animTimer += 0.1;
   }
 
-  // Coleta
+  // Movimento dos Vilões (Selvagens)
+  enemies.forEach(enemy => {
+    enemy.animTimer += 0.1;
+    let nextX = enemy.x + (enemy.dirX * enemy.speed);
+    let nextY = enemy.y + (enemy.dirY * enemy.speed);
+    if (collidesWithWall(nextX, enemy.y, enemy.r)) {
+      enemy.dirX *= -1;
+      nextX = enemy.x + (enemy.dirX * enemy.speed);
+    }
+    if (collidesWithWall(enemy.x, nextY, enemy.r)) {
+      enemy.dirY *= -1;
+      nextY = enemy.y + (enemy.dirY * enemy.speed);
+    }
+    enemy.x = nextX;
+    enemy.y = nextY;
+  });
+
+  // Movimento da Equipe Rocket (Patrulha de um lado para o outro)
+  rockets.forEach(rocket => {
+    rocket.animTimer += 0.1;
+    // Eles andam 1 quadrado para frente e para trás
+    let nextX = rocket.x + (rocket.dir * 1.5);
+    
+    // Se bater na parede, vira
+    if (collidesWithWall(nextX, rocket.y, rocket.r)) {
+      rocket.dir *= -1;
+      nextX = rocket.x + (rocket.dir * 1.5);
+    }
+    
+    // Limitar a patrulha a 1 quadrado e meio de distância do ponto de origem
+    const originX = Math.round((rocket.x - TILE/2) / TILE) * TILE + TILE/2;
+    if (Math.abs(nextX - originX) > TILE * 1.5) {
+      rocket.dir *= -1;
+      nextX = rocket.x + (rocket.dir * 1.5);
+    }
+
+    rocket.x = nextX;
+  });
+
+  // Coleta de Pokébolas
   items.forEach(item => {
     if (!item.collected) {
       if (Math.hypot(player.x - item.x, player.y - item.y) < player.r + item.r) {
@@ -367,6 +477,16 @@ function update() {
     }
   });
 
+  // Colisão com Vilões e Rockets
+  if (!player.invulnerable) {
+    enemies.forEach(enemy => {
+      if (Math.hypot(player.x - enemy.x, player.y - enemy.y) < player.r + enemy.r) takeDamage();
+    });
+    rockets.forEach(rocket => {
+      if (Math.hypot(player.x - rocket.x, player.y - rocket.y) < player.r + rocket.r) takeDamage();
+    });
+  }
+
   // Vitória
   if (target.active) {
     if (Math.hypot(player.x - target.x, player.y - target.y) < player.r + target.r) {
@@ -376,7 +496,6 @@ function update() {
   }
 }
 
-// ===== Desenho =====
 function drawMap() {
   for (let row = 0; row < MAP_H; row++) {
     for (let col = 0; col < MAP_W; col++) {
@@ -393,150 +512,63 @@ function drawMap() {
   }
 }
 
-function drawPokeball(x, y, r, isGold) {
+function drawSprite(img, x, y, size, flip = false) {
+  if (!img.complete) return;
   ctx.save();
-  ctx.beginPath();
-  ctx.arc(x, y, r, Math.PI, 0);
-  ctx.fillStyle = isGold ? '#ffcc00' : '#ff1c1c';
-  ctx.fill();
-  
-  ctx.beginPath();
-  ctx.arc(x, y, r, 0, Math.PI);
-  ctx.fillStyle = isGold ? '#fff2aa' : '#ffffff';
-  ctx.fill();
-  
-  ctx.beginPath();
-  ctx.arc(x, y, r, 0, Math.PI * 2);
-  ctx.strokeStyle = '#000';
-  ctx.lineWidth = 2;
-  ctx.stroke();
-  
-  ctx.beginPath();
-  ctx.moveTo(x - r, y);
-  ctx.lineTo(x + r, y);
-  ctx.stroke();
-  
-  ctx.beginPath();
-  ctx.arc(x, y, r * 0.25, 0, Math.PI * 2);
-  ctx.fillStyle = '#fff';
-  ctx.fill();
-  ctx.strokeStyle = '#000';
-  ctx.lineWidth = 2;
-  ctx.stroke();
+  ctx.translate(x, y);
+  if (flip) ctx.scale(-1, 1);
+  ctx.drawImage(img, -size/2, -size/2, size, size);
   ctx.restore();
+}
+
+function drawPlayer() {
+  if (player.invulnerable && Math.floor(Date.now() / 100) % 2 === 0) return;
+  const floatOffset = Math.sin(player.animTimer * 3) * 2;
+  const size = 36;
+  if (currentCharacter === 'pikachu') drawSprite(sprites.pikachu, player.x, player.y + floatOffset, size);
+  else if (currentCharacter === 'charmander') drawSprite(sprites.charmander, player.x, player.y + floatOffset, size);
+  else drawSprite(sprites.bulbasaur, player.x, player.y + floatOffset, size);
+}
+
+function drawEnemies() {
+  enemies.forEach(enemy => {
+    const floatOffset = Math.sin(enemy.animTimer * 4) * 3;
+    const size = 34;
+    if (enemy.type === 'zubat') drawSprite(sprites.zubat, enemy.x, enemy.y + floatOffset, size);
+    else drawSprite(sprites.koffing, enemy.x, enemy.y + floatOffset, size);
+  });
+}
+
+function drawRockets() {
+  rockets.forEach(rocket => {
+    const size = 36;
+    // Se o dir for -1 (andando pra esquerda), a imagem vira de lado
+    const flip = rocket.dir === -1;
+    if (rocket.type === 'jessie') drawSprite(sprites.jessie, rocket.x, rocket.y, size, flip);
+    else drawSprite(sprites.james, rocket.x, rocket.y, size, flip);
+  });
 }
 
 function drawTarget() {
   if (!target.active) return;
   const time = Date.now() / 200;
-  const scale = 1 + Math.sin(time) * 0.1;
+  const scale = 1 + Math.sin(time) * 0.15;
+  const size = 36 * scale;
   ctx.save();
-  ctx.translate(target.x, target.y);
-  ctx.scale(scale, scale);
-  drawPokeball(0, 0, target.r, true);
-  ctx.restore();
-}
-
-// ===== Desenho dos Personagens =====
-function drawPlayer() {
-  ctx.save();
-  const floatOffset = Math.sin(player.animTimer * 3) * 2;
-  const py = player.y + floatOffset;
-  
-  // Define as cores baseadas no personagem escolhido
-  let bodyColor, outlineColor, cheekColor;
-  if (currentCharacter === 'pikachu') {
-    bodyColor = '#ffe033'; outlineColor = '#c9a800'; cheekColor = '#ff5555';
-  } else if (currentCharacter === 'charmander') {
-    bodyColor = '#ff7f27'; outlineColor = '#cc5500'; cheekColor = '#ff5555';
-  } else {
-    bodyColor = '#7ec8e3'; outlineColor = '#4a90e2'; cheekColor = '#ff5555';
-  }
-
-  // Corpo
-  ctx.beginPath();
-  ctx.arc(player.x, py, player.r, 0, Math.PI * 2);
-  ctx.fillStyle = bodyColor;
-  ctx.fill();
-  ctx.strokeStyle = outlineColor;
-  ctx.lineWidth = 2;
-  ctx.stroke();
-
-  // Detalhes específicos de cada personagem
-  if (currentCharacter === 'pikachu') {
-    // Orelhas pontudas
-    ctx.beginPath();
-    ctx.moveTo(player.x - 6, py - player.r + 2);
-    ctx.lineTo(player.x - 10, py - player.r - 8);
-    ctx.lineTo(player.x - 2, py - player.r + 2);
-    ctx.closePath();
-    ctx.fillStyle = bodyColor;
-    ctx.fill();
-    ctx.strokeStyle = outlineColor;
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.moveTo(player.x + 6, py - player.r + 2);
-    ctx.lineTo(player.x + 10, py - player.r - 8);
-    ctx.lineTo(player.x + 2, py - player.r + 2);
-    ctx.closePath();
-    ctx.fillStyle = bodyColor;
-    ctx.fill();
-    ctx.strokeStyle = outlineColor;
-    ctx.stroke();
-  } else if (currentCharacter === 'charmander') {
-    // Chama na cauda
-    ctx.beginPath();
-    ctx.moveTo(player.x + player.r, py);
-    ctx.lineTo(player.x + player.r + 8, py - 5);
-    ctx.lineTo(player.x + player.r + 4, py + 5);
-    ctx.fillStyle = '#ffcc00';
-    ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(player.x + player.r + 2, py);
-    ctx.lineTo(player.x + player.r + 6, py - 3);
-    ctx.lineTo(player.x + player.r + 4, py + 3);
-    ctx.fillStyle = '#ff0000';
-    ctx.fill();
-  } else if (currentCharacter === 'bulbasaur') {
-    // Bulbo nas costas
-    ctx.beginPath();
-    ctx.arc(player.x, py - player.r + 2, 8, 0, Math.PI * 2);
-    ctx.fillStyle = '#4caf50';
-    ctx.fill();
-    ctx.strokeStyle = '#2e7d32';
-    ctx.stroke();
-  }
-
-  // Olhos
-  const eyeY = py - 3;
-  let eyeLX = player.x - 4, eyeRX = player.x + 4;
-  if (player.dir === 'left')  { eyeLX = player.x - 7; eyeRX = player.x - 1; }
-  if (player.dir === 'right') { eyeLX = player.x + 1; eyeRX = player.x + 7; }
-  if (player.dir === 'up')    { eyeLX = player.x - 4; eyeRX = player.x + 4; }
-
-  ctx.beginPath();
-  ctx.arc(eyeLX, eyeY, 2, 0, Math.PI * 2);
-  ctx.arc(eyeRX, eyeY, 2, 0, Math.PI * 2);
-  ctx.fillStyle = '#000';
-  ctx.fill();
-
-  // Bochechas
-  if (currentCharacter === 'pikachu') {
-    ctx.beginPath();
-    ctx.arc(player.x - 7, py + 3, 2.5, 0, Math.PI * 2);
-    ctx.arc(player.x + 7, py + 3, 2.5, 0, Math.PI * 2);
-    ctx.fillStyle = cheekColor;
-    ctx.fill();
-  }
-
+  ctx.shadowColor = '#ffcc00';
+  ctx.shadowBlur = 15;
+  drawSprite(sprites.goldball, target.x, target.y, size);
   ctx.restore();
 }
 
 function loop() {
   update();
   drawMap();
-  items.forEach(item => { if (!item.collected) drawPokeball(item.x, item.y, item.r, false); });
+  items.forEach(item => {
+    if (!item.collected) drawSprite(sprites.pokeball, item.x, item.y, 28);
+  });
+  drawEnemies();
+  drawRockets();
   drawTarget();
   drawPlayer();
   gameLoopId = requestAnimationFrame(loop);
