@@ -14,16 +14,17 @@
   }
   #game {
     display: block;
-    margin: 0 auto;
-    background: #7ec850; /* grama */
+    margin: 20px auto 0;
+    background: #7ec850;
     image-rendering: pixelated;
+    border: 4px solid #0f3460;
+    border-radius: 8px;
   }
   #hud {
-    position: fixed;
-    top: 10px;
-    left: 10px;
+    text-align: center;
     color: #fff;
     font-size: 18px;
+    margin-top: 10px;
     text-shadow: 1px 1px 2px #000;
   }
   #win {
@@ -31,7 +32,7 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background: rgba(0,0,0,0.85);
+    background: rgba(0,0,0,0.9);
     color: #ffd700;
     padding: 30px 50px;
     border-radius: 16px;
@@ -39,6 +40,7 @@
     text-align: center;
     display: none;
     border: 4px solid #ffd700;
+    z-index: 10;
   }
   #win button {
     margin-top: 20px;
@@ -48,6 +50,7 @@
     border: none;
     background: #ffd700;
     cursor: pointer;
+    font-weight: bold;
   }
 </style>
 </head>
@@ -68,60 +71,65 @@
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 
-const TILE = 40;          // tamanho de cada célula do mapa (px)
-const MAP_W = 15;         // largura do mapa em células
-const MAP_H = 11;         // altura do mapa em células
+const TILE = 40;
+const MAP_W = 15;
+const MAP_H = 11;
 
 canvas.width  = MAP_W * TILE;
 canvas.height = MAP_H * TILE;
 
 // Mapa: 0 = chão livre, 1 = parede
-// Você pode editar esse array para desenhar labirintos diferentes.
+// Foi desenhado com um caminho contínuo do canto superior esquerdo
+// até o canto inferior direito.
 const MAP = [
   [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  [1,0,1,1,0,0,1,1,0,0,0,1,1,0,1],
-  [1,0,1,0,0,0,0,0,0,1,0,0,0,0,1],
-  [1,0,0,0,0,1,0,0,0,1,0,0,1,0,1],
-  [1,0,0,1,0,0,0,0,0,0,0,0,1,0,1],
-  [1,0,0,1,1,1,0,0,0,0,0,0,1,0,1],
-  [1,0,0,0,0,0,0,0,1,1,0,0,0,0,1],
-  [1,0,1,1,0,0,0,0,1,0,0,1,0,0,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,1,1,1,1,1,1,1,1,1,1],
+  [1,0,1,1,0,1,0,0,0,0,0,0,0,0,1],
+  [1,0,1,1,0,1,0,1,1,1,1,1,1,0,1],
+  [1,0,0,0,0,1,0,1,1,1,1,1,1,0,1],
+  [1,1,1,1,0,1,0,0,0,0,0,0,0,0,1],
+  [1,1,1,1,0,1,1,1,1,1,1,1,0,1,1],
+  [1,1,1,1,0,0,0,0,0,0,0,1,0,1,1],
+  [1,1,1,1,1,1,1,1,1,1,0,1,0,1,1],
+  [1,0,0,0,0,0,0,0,0,0,0,1,0,0,1],
   [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ];
 
-// ===== Jogador =====
+// ===== Jogador (começa em célula livre: col=1, row=1) =====
+const START_COL = 1;
+const START_ROW = 1;
+
 const player = {
-  x: 2 * TILE + TILE / 2,   // posição em pixels (centro)
-  y: 2 * TILE + TILE / 2,
-  r: 12,                     // raio para colisão
-  speed: 2.2,                // pixels por frame (ajuste para mais rápido/devagar)
+  x: START_COL * TILE + TILE / 2,
+  y: START_ROW * TILE + TILE / 2,
+  r: 12,
+  speed: 2.4,
   dir: 'down'
 };
 
-// ===== Pokébola (objetivo) =====
+// ===== Alvo (célula livre: col=13, row=9) =====
 const target = {
-  x: 12 * TILE + TILE / 2,
-  y: 8 * TILE + TILE / 2,
+  x: 13 * TILE + TILE / 2,
+  y: 9 * TILE + TILE / 2,
   r: 14
 };
 
 // ===== Teclado =====
 const keys = {};
 window.addEventListener('keydown', e => {
-  keys[e.key] = true;
-  // evita scroll da página com as setas
-  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) {
+  const k = e.code || e.key;
+  keys[k] = true;
+  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(k)) {
     e.preventDefault();
   }
 });
-window.addEventListener('keyup', e => { keys[e.key] = false; });
+window.addEventListener('keyup', e => {
+  const k = e.code || e.key;
+  keys[k] = false;
+});
 
-// ===== Colisão =====
-// Verifica se um círculo (cx, cy, r) toca alguma parede do mapa
+// ===== Colisão círculo × paredes =====
 function collidesWithWall(cx, cy, r) {
-  // células que o círculo pode encostar
   const minCol = Math.floor((cx - r) / TILE);
   const maxCol = Math.floor((cx + r) / TILE);
   const minRow = Math.floor((cy - r) / TILE);
@@ -129,10 +137,8 @@ function collidesWithWall(cx, cy, r) {
 
   for (let row = minRow; row <= maxRow; row++) {
     for (let col = minCol; col <= maxCol; col++) {
-      // fora do mapa conta como parede
       if (row < 0 || row >= MAP_H || col < 0 || col >= MAP_W) return true;
       if (MAP[row][col] === 1) {
-        // colisão círculo × retângulo
         const rx = col * TILE, ry = row * TILE;
         const nx = Math.max(rx, Math.min(cx, rx + TILE));
         const ny = Math.max(ry, Math.min(cy, ry + TILE));
@@ -144,8 +150,13 @@ function collidesWithWall(cx, cy, r) {
   return false;
 }
 
-// ===== Movimento =====
+// ===== Estado =====
+let winShown = false;
+
+// ===== Update =====
 function update() {
+  if (winShown) return;
+
   let dx = 0, dy = 0;
   if (keys['ArrowUp'])    dy -= 1;
   if (keys['ArrowDown'])  dy += 1;
@@ -153,12 +164,10 @@ function update() {
   if (keys['ArrowRight']) dx += 1;
 
   if (dx !== 0 || dy !== 0) {
-    // normaliza diagonal para não ficar mais rápido
     const len = Math.hypot(dx, dy);
     dx = (dx / len) * player.speed;
     dy = (dy / len) * player.speed;
 
-    // atualiza direção para desenhar o "olhar"
     if (Math.abs(dx) > Math.abs(dy)) player.dir = dx > 0 ? 'right' : 'left';
     else player.dir = dy > 0 ? 'down' : 'up';
 
@@ -179,30 +188,34 @@ function update() {
   }
 }
 
-// ===== Desenho =====
-function draw() {
-  // chão
+// ===== Desenho do mapa =====
+function drawMap() {
   for (let row = 0; row < MAP_H; row++) {
     for (let col = 0; col < MAP_W; col++) {
       if (MAP[row][col] === 1) {
-        ctx.fillStyle = '#5a8a3a'; // parede (arbusto/rocha)
+        ctx.fillStyle = '#5a8a3a';
       } else {
-        ctx.fillStyle = (row + col) % 2 === 0 ? '#8fd45a' : '#83c94f'; // grama xadrez suave
+        ctx.fillStyle = (row + col) % 2 === 0 ? '#8fd45a' : '#83c94f';
       }
       ctx.fillRect(col * TILE, row * TILE, TILE, TILE);
     }
   }
+}
 
-  // Pokébola
+// ===== Desenho da Pokébola =====
+function drawTarget() {
   ctx.save();
-  ctx.beginPath();
-  ctx.arc(target.x, target.y, target.r, 0, Math.PI * 2);
-  ctx.fillStyle = '#ff1c1c';
-  ctx.fill();
+  // metade superior vermelha
   ctx.beginPath();
   ctx.arc(target.x, target.y, target.r, Math.PI, 0);
+  ctx.fillStyle = '#ff1c1c';
+  ctx.fill();
+  // metade inferior branca
+  ctx.beginPath();
+  ctx.arc(target.x, target.y, target.r, 0, Math.PI);
   ctx.fillStyle = '#ffffff';
   ctx.fill();
+  // contorno
   ctx.beginPath();
   ctx.arc(target.x, target.y, target.r, 0, Math.PI * 2);
   ctx.strokeStyle = '#000';
@@ -219,11 +232,15 @@ function draw() {
   ctx.fillStyle = '#fff';
   ctx.fill();
   ctx.strokeStyle = '#000';
+  ctx.lineWidth = 2;
   ctx.stroke();
   ctx.restore();
+}
 
-  // Pikachu (simplificado, sem sprite externo)
+// ===== Desenho do Pikachu =====
+function drawPlayer() {
   ctx.save();
+
   // corpo
   ctx.beginPath();
   ctx.arc(player.x, player.y, player.r, 0, Math.PI * 2);
@@ -233,28 +250,7 @@ function draw() {
   ctx.lineWidth = 2;
   ctx.stroke();
 
-  // olhos (mudam conforme a direção)
-  const eyeOffset = 5;
-  const eyeY = player.y - 3;
-  let eyeLX = player.x - 4, eyeRX = player.x + 4;
-  if (player.dir === 'left')  { eyeLX = player.x - 7; eyeRX = player.x - 1; }
-  if (player.dir === 'right') { eyeLX = player.x + 1; eyeRX = player.x + 7; }
-  if (player.dir === 'up')    { eyeLX = player.x - 4; eyeRX = player.x + 4; }
-
-  ctx.beginPath();
-  ctx.arc(eyeLX, eyeY, 2, 0, Math.PI * 2);
-  ctx.arc(eyeRX, eyeY, 2, 0, Math.PI * 2);
-  ctx.fillStyle = '#000';
-  ctx.fill();
-
-  // bochechas vermelhas
-  ctx.beginPath();
-  ctx.arc(player.x - 7, player.y + 3, 2.5, 0, Math.PI * 2);
-  ctx.arc(player.x + 7, player.y + 3, 2.5, 0, Math.PI * 2);
-  ctx.fillStyle = '#ff5555';
-  ctx.fill();
-
-  // orelhinhas
+  // orelhas
   ctx.beginPath();
   ctx.moveTo(player.x - 6, player.y - player.r + 2);
   ctx.lineTo(player.x - 10, player.y - player.r - 8);
@@ -275,27 +271,48 @@ function draw() {
   ctx.strokeStyle = '#c9a800';
   ctx.stroke();
 
+  // olhos
+  const eyeY = player.y - 3;
+  let eyeLX = player.x - 4, eyeRX = player.x + 4;
+  if (player.dir === 'left')  { eyeLX = player.x - 7; eyeRX = player.x - 1; }
+  if (player.dir === 'right') { eyeLX = player.x + 1; eyeRX = player.x + 7; }
+  if (player.dir === 'up')    { eyeLX = player.x - 4; eyeRX = player.x + 4; }
+
+  ctx.beginPath();
+  ctx.arc(eyeLX, eyeY, 2, 0, Math.PI * 2);
+  ctx.arc(eyeRX, eyeY, 2, 0, Math.PI * 2);
+  ctx.fillStyle = '#000';
+  ctx.fill();
+
+  // bochechas vermelhas
+  ctx.beginPath();
+  ctx.arc(player.x - 7, player.y + 3, 2.5, 0, Math.PI * 2);
+  ctx.arc(player.x + 7, player.y + 3, 2.5, 0, Math.PI * 2);
+  ctx.fillStyle = '#ff5555';
+  ctx.fill();
+
   ctx.restore();
 }
 
-// ===== Loop do jogo =====
-let winShown = false;
-let animationId;
-
+// ===== Loop =====
 function loop() {
-  if (!winShown) update();
-  draw();
-  animationId = requestAnimationFrame(loop);
+  update();
+  drawMap();
+  drawTarget();
+  drawPlayer();
+  requestAnimationFrame(loop);
 }
 
+// ===== Vitória =====
 function showWin() {
   winShown = true;
   document.getElementById('win').style.display = 'block';
 }
 
+// ===== Reset =====
 function resetGame() {
-  player.x = 2 * TILE + TILE / 2;
-  player.y = 2 * TILE + TILE / 2;
+  player.x = START_COL * TILE + TILE / 2;
+  player.y = START_ROW * TILE + TILE / 2;
   player.dir = 'down';
   winShown = false;
   document.getElementById('win').style.display = 'none';
