@@ -4,61 +4,44 @@
 <meta charset="UTF-8">
 <title>Poké-Robô: Caçada Infinita</title>
 <style>
-  /* Força o navegador a não usar cache antigo */
   * { box-sizing: border-box; }
-  
   html, body {
     margin: 0; padding: 0; background: #1a1a2e;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     overflow: hidden; height: 100%;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
   }
-  
   #menu {
     text-align: center; color: white; background: rgba(0,0,0,0.85);
     padding: 30px 20px; border-radius: 20px; border: 4px solid #ffd700;
-    box-shadow: 0 0 30px rgba(255, 215, 0, 0.3); z-index: 20;
-    max-width: 95vw;
+    box-shadow: 0 0 30px rgba(255, 215, 0, 0.3); z-index: 20; max-width: 95vw;
   }
   #menu h1 { color: #ffd700; margin-top: 0; text-shadow: 2px 2px 4px #000; font-size: 24px; }
-  
-  .characters { 
-    display: flex; 
-    gap: 10px; 
-    justify-content: center; 
-    margin: 20px 0; 
-    flex-wrap: wrap; 
-  }
-  
+  .characters { display: flex; gap: 10px; justify-content: center; margin: 20px 0; flex-wrap: wrap; }
   .char-btn {
     background: #333; border: 3px solid #555; border-radius: 12px; padding: 10px;
     cursor: pointer; transition: all 0.2s; color: white; font-size: 14px; font-weight: bold;
-    display: flex; flex-direction: column; align-items: center; 
-    width: 100px; 
+    display: flex; flex-direction: column; align-items: center; width: 100px;
   }
   .char-btn:hover { transform: scale(1.1); border-color: #ffd700; }
   .char-btn img { width: 60px; height: 60px; image-rendering: pixelated; margin-bottom: 5px; }
   
   #game-area { display: none; flex-direction: column; align-items: center; position: relative; }
-  
   #hud {
     color: #fff; font-size: 20px; font-weight: bold; margin-bottom: 10px;
     text-shadow: 2px 2px 0 #000;
     display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center;
   }
   .hud-item { background: rgba(0,0,0,0.7); padding: 5px 12px; border-radius: 8px; border: 2px solid #0f3460; }
-  
   #game-container {
     position: relative; border: 6px solid #0f3460; border-radius: 12px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.5); background: #7ec850; overflow: hidden;
   }
   #game { display: block; image-rendering: pixelated; max-width: 95vw; max-height: 60vh; }
-
   #damage-overlay {
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
     background: rgba(255, 0, 0, 0.5); display: none; pointer-events: none; z-index: 5;
   }
-  
   #win, #gameover {
     position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
     background: rgba(0,0,0,0.95); color: #ffd700; padding: 25px 40px;
@@ -66,13 +49,11 @@
     border: 4px solid #ffd700; z-index: 10; box-shadow: 0 0 20px #ffd700; white-space: nowrap;
   }
   #gameover { color: #ff5555; border-color: #ff5555; box-shadow: 0 0 20px #ff5555; }
-  
   #win button, #gameover button {
     margin-top: 15px; font-size: 18px; padding: 10px 20px; border-radius: 8px;
     border: none; background: #ffd700; cursor: pointer; font-weight: bold;
   }
   #gameover button { background: #ff5555; color: white; }
-  
   .instrucoes { color: #aaa; font-size: 14px; margin-top: 10px; text-align: center; }
 </style>
 </head>
@@ -102,23 +83,12 @@
     <div class="hud-item" style="color:#ff5555">Pokébolas: <span id="score">0</span> / <span id="total">0</span></div>
     <div class="hud-item" style="color:#ff5555">Vidas: <span id="lives">❤️❤️❤️</span></div>
   </div>
-
   <div id="game-container">
     <canvas id="game"></canvas>
     <div id="damage-overlay"></div>
-    
-    <div id="win">
-      🎉 Fase Concluída! 🎉<br>
-      <button onclick="nextLevel()">Ir para a Próxima Fase</button>
-    </div>
-    
-    <div id="gameover">
-      💀 Você foi capturado! 💀<br>
-      <span style="font-size: 16px; color: #ccc;">Tente novamente!</span><br>
-      <button onclick="restartLevel()">Tentar de Novo</button>
-    </div>
+    <div id="win">🎉 Fase Concluída! 🎉<br><button onclick="nextLevel()">Ir para a Próxima Fase</button></div>
+    <div id="gameover">💀 Você foi capturado! 💀<br><span style="font-size: 16px; color: #ccc;">Tente novamente!</span><br><button onclick="restartLevel()">Tentar de Novo</button></div>
   </div>
-
   <div class="instrucoes">Cuidado com os vilões! Eles te perseguem se chegarem perto.</div>
 </div>
 
@@ -128,11 +98,9 @@ const ctx = canvas.getContext('2d');
 const TILE = 40;
 const MAP_W = 15;
 const MAP_H = 11;
-
 canvas.width  = MAP_W * TILE;
 canvas.height = MAP_H * TILE;
 
-// ===== Imagens =====
 const sprites = {
   pikachu: new Image(), charmander: new Image(), bulbasaur: new Image(), squirtle: new Image(),
   zubat: new Image(), koffing: new Image(),
@@ -151,7 +119,6 @@ sprites.james.src = "https://play.pokemonshowdown.com/sprites/trainers/james.png
 sprites.pokeball.src = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-ball.png";
 sprites.goldball.src = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/master-ball.png";
 
-// ===== Variáveis de Estado =====
 let currentCharacter = 'pikachu';
 let currentLevel = 1;
 let MAP = [];
@@ -167,7 +134,6 @@ let lives = 3;
 let winShown = false;
 let gameLoopId = null;
 
-// ===== Inicialização =====
 function startGame(character) {
   currentCharacter = character;
   currentLevel = 1;
@@ -201,6 +167,11 @@ function updateLivesUI() {
   document.getElementById('lives').innerText = heartStr;
 }
 
+// ===== Helper: Verifica se uma célula é segura para vilões =====
+function isSafeForEnemy(c, r) {
+  return !(r === 1 && c === 1) && !(r === MAP_H - 2 && c === MAP_W - 2) && r !== 1 && c !== 1;
+}
+
 // ===== Geração do Labirinto =====
 function generateMaze() {
   MAP = Array.from({ length: MAP_H }, () => Array(MAP_W).fill(1));
@@ -231,7 +202,7 @@ function generateMaze() {
     }
   }
 
-  // Posições iniciais
+  // Posições
   player.x = 1 * TILE + TILE / 2;
   player.y = 1 * TILE + TILE / 2;
   player.dir = 'down';
@@ -259,18 +230,29 @@ function generateMaze() {
     items.push({ x: emptyCells[i].c * TILE + TILE / 2, y: emptyCells[i].r * TILE + TILE / 2, r: 12, collected: false });
   }
   
-  // Vilões selvagens
+  // Vilões selvagens (sistema de grid: andam 1 quadrado por vez, alinhados)
   enemies = [];
   const numEnemies = Math.min(1 + Math.floor(currentLevel / 2), 3);
   const enemyTypes = ['zubat', 'koffing'];
+  let enemyCells = emptyCells.filter(cell => isSafeForEnemy(cell.c, cell.r));
+  enemyCells.sort(() => Math.random() - 0.5);
+
   for (let i = 0; i < numEnemies; i++) {
-    const cell = emptyCells[emptyCells.length - 1 - i];
+    const cell = enemyCells[i];
     if (cell) {
+      // Escolhe uma direção inicial válida
+      const dirs = [{dx:1,dy:0},{dx:-1,dy:0},{dx:0,dy:1},{dx:0,dy:-1}].sort(() => Math.random() - 0.5);
+      let dir = dirs[0];
       enemies.push({
-        x: cell.c * TILE + TILE / 2, y: cell.r * TILE + TILE / 2, r: 14,
-        type: enemyTypes[i % 2], animTimer: Math.random() * 10,
-        dirX: Math.random() > 0.5 ? 1 : -1, dirY: Math.random() > 0.5 ? 1 : -1,
-        speed: 1.2 + (currentLevel * 0.1)
+        x: cell.c * TILE + TILE / 2, 
+        y: cell.r * TILE + TILE / 2, 
+        r: 14,
+        gridC: cell.c, gridR: cell.r, // Posição na grade (para alinhamento perfeito)
+        type: enemyTypes[i % 2], 
+        animTimer: Math.random() * 10,
+        dirX: dir.dx, dirY: dir.dy,
+        speed: 1.0 + (currentLevel * 0.1),
+        moving: false
       });
     }
   }
@@ -278,22 +260,21 @@ function generateMaze() {
   // Equipe Rocket
   rockets = [];
   const numRockets = Math.min(Math.floor(currentLevel / 2), 2);
-  let rocketCells = emptyCells.filter(cell => {
-    // Não nasce no início, nem no fim, nem na primeira linha/coluna
-    return !(cell.r === 1 && cell.c === 1) && !(cell.r === MAP_H - 2 && cell.c === MAP_W - 2) && cell.r !== 1 && cell.c !== 1;
-  });
+  let rocketCells = emptyCells.filter(cell => isSafeForEnemy(cell.c, cell.r));
   rocketCells.sort(() => Math.random() - 0.5);
   
   for (let i = 0; i < numRockets; i++) {
     const cell = rocketCells[i];
     if (cell) {
+      const dirs = [{dx:1,dy:0},{dx:-1,dy:0},{dx:0,dy:1},{dx:0,dy:-1}].sort(() => Math.random() - 0.5);
       rockets.push({
         x: cell.c * TILE + TILE / 2, y: cell.r * TILE + TILE / 2, r: 14,
+        gridC: cell.c, gridR: cell.r,
         type: i % 2 === 0 ? 'jessie' : 'james',
-        dirX: Math.random() > 0.5 ? 1 : -1, dirY: Math.random() > 0.5 ? 1 : -1,
-        isHorizontal: Math.random() > 0.5,
+        dirX: dirs[0].dx, dirY: dirs[0].dy,
         animTimer: Math.random() * 10,
-        speed: 1.0
+        speed: 0.9,
+        moving: false
       });
     }
   }
@@ -307,7 +288,6 @@ function generateMaze() {
   document.getElementById('gameover').style.display = 'none';
 }
 
-// ===== Controles =====
 window.addEventListener('keydown', e => {
   const k = e.code || e.key;
   keys[k] = true;
@@ -318,7 +298,6 @@ window.addEventListener('keyup', e => {
   keys[k] = false;
 });
 
-// ===== Colisão =====
 function collidesWithWall(cx, cy, r) {
   const minCol = Math.floor((cx - r) / TILE);
   const maxCol = Math.floor((cx + r) / TILE);
@@ -340,19 +319,21 @@ function collidesWithWall(cx, cy, r) {
   return false;
 }
 
-// ===== Dano =====
+// ===== Verifica se uma célula da grade está livre =====
+function isCellFree(c, r) {
+  if (c < 0 || c >= MAP_W || r < 0 || r >= MAP_H) return false;
+  return MAP[r][c] === 0;
+}
+
 function takeDamage() {
   player.invulnerable = true;
   lives--;
   updateLivesUI();
-  
   const overlay = document.getElementById('damage-overlay');
   overlay.style.display = 'block';
   setTimeout(() => overlay.style.display = 'none', 200);
-  
   player.x = 1 * TILE + TILE / 2;
   player.y = 1 * TILE + TILE / 2;
-  
   if (lives <= 0) {
     winShown = true; 
     document.getElementById('gameover').style.display = 'block';
@@ -361,99 +342,93 @@ function takeDamage() {
   }
 }
 
-// ===== NOVA IA: Equipe Rocket =====
-// Escolhe o melhor caminho livre para se aproximar do jogador
-function moveRocket(rocket, targetX, targetY, speed) {
-  // Calcula a distância até o jogador
-  const distToPlayer = Math.hypot(targetX - rocket.x, targetY - rocket.y);
+// ===== IA baseada em grade (funciona como Pac-Man) =====
+function updateEnemyGrid(entity, speed, chasePlayer = false) {
+  const centerX = entity.gridC * TILE + TILE / 2;
+  const centerY = entity.gridR * TILE + TILE / 2;
   
-  // Se estiver longe, patrulha normal
-  if (distToPlayer > TILE * 4) {
-    if (rocket.isHorizontal) {
-      let nextX = rocket.x + rocket.dirX * speed;
-      if (collidesWithWall(nextX, rocket.y, rocket.r)) {
-        rocket.dirX *= -1;
-        nextX = rocket.x + rocket.dirX * speed;
-      }
-      if (!collidesWithWall(nextX, rocket.y, rocket.r)) rocket.x = nextX;
-    } else {
-      let nextY = rocket.y + rocket.dirY * speed;
-      if (collidesWithWall(rocket.x, nextY, rocket.r)) {
-        rocket.dirY *= -1;
-        nextY = rocket.y + rocket.dirY * speed;
-      }
-      if (!collidesWithWall(rocket.x, nextY, rocket.r)) rocket.y = nextY;
-    }
-    return;
-  }
-
-  // Se estiver perto, persegue
-  // Testa todas as direções possíveis
-  const possibleMoves = [
-    { dx: speed, dy: 0 },  // Direita
-    { dx: -speed, dy: 0 }, // Esquerda
-    { dx: 0, dy: speed },  // Baixo
-    { dx: 0, dy: -speed }  // Cima
-  ];
-
-  let bestMove = null;
-  let bestDist = Infinity;
-
-  for (let move of possibleMoves) {
-    const nextX = rocket.x + move.dx;
-    const nextY = rocket.y + move.dy;
+  const distToCenter = Math.hypot(entity.x - centerX, entity.y - centerY);
+  
+  if (distToCenter < 1) {
+    // Está alinhado ao centro da célula: momento de decidir a direção
+    entity.x = centerX;
+    entity.y = centerY;
     
-    // Se o caminho estiver livre
-    if (!collidesWithWall(nextX, nextY, rocket.r)) {
-      const dist = Math.hypot(targetX - nextX, targetY - nextY);
-      if (dist < bestDist) {
-        bestDist = dist;
-        bestMove = move;
+    // Verifica se pode continuar na direção atual
+    let canContinue = isCellFree(entity.gridC + entity.dirX, entity.gridR + entity.dirY);
+    
+    // Se está perseguindo o jogador, escolhe a melhor direção
+    if (chasePlayer) {
+      const playerCellC = Math.floor(player.x / TILE);
+      const playerCellR = Math.floor(player.y / TILE);
+      const distToPlayer = Math.abs(playerCellC - entity.gridC) + Math.abs(playerCellR - entity.gridR);
+      
+      // Só persegue se o jogador estiver a até 4 células de distância (Manhattan)
+      if (distToPlayer <= 4) {
+        const possibleDirs = [
+          {dx: 1, dy: 0}, {dx: -1, dy: 0}, {dx: 0, dy: 1}, {dx: 0, dy: -1}
+        ].filter(d => isCellFree(entity.gridC + d.dx, entity.gridR + d.dy));
+        
+        if (possibleDirs.length > 0) {
+          // Escolhe a direção que mais aproxima do jogador
+          let bestDir = possibleDirs[0];
+          let bestDist = Infinity;
+          for (let d of possibleDirs) {
+            const newC = entity.gridC + d.dx;
+            const newR = entity.gridR + d.dy;
+            const dist = Math.abs(playerCellC - newC) + Math.abs(playerCellR - newR);
+            if (dist < bestDist) {
+              bestDist = dist;
+              bestDir = d;
+            }
+          }
+          entity.dirX = bestDir.dx;
+          entity.dirY = bestDir.dy;
+          canContinue = true;
+        }
       }
     }
+    
+    // Se não pode continuar (parede à frente), escolhe outra direção
+    if (!canContinue) {
+      const possibleDirs = [
+        {dx: 1, dy: 0}, {dx: -1, dy: 0}, {dx: 0, dy: 1}, {dx: 0, dy: -1}
+      ].filter(d => isCellFree(entity.gridC + d.dx, entity.gridR + d.dy));
+      
+      if (possibleDirs.length > 0) {
+        const chosen = possibleDirs[Math.floor(Math.random() * possibleDirs.length)];
+        entity.dirX = chosen.dx;
+        entity.dirY = chosen.dy;
+        canContinue = true;
+      }
+    }
+    
+    if (!canContinue) {
+      // Totalmente preso (beco sem saída) - para
+      return;
+    }
+    
+    // Atualiza a célula alvo
+    entity.gridC += entity.dirX;
+    entity.gridR += entity.dirY;
   }
-
-  // Se encontrou um caminho válido, move
-  if (bestMove) {
-    rocket.x += bestMove.dx;
-    rocket.y += bestMove.dy;
-    if (bestMove.dx !== 0) rocket.dirX = Math.sign(bestMove.dx);
-    if (bestMove.dy !== 0) rocket.dirY = Math.sign(bestMove.dy);
+  
+  // Move em direção ao centro da próxima célula
+  const targetX = entity.gridC * TILE + TILE / 2;
+  const targetY = entity.gridR * TILE + TILE / 2;
+  
+  const dx = targetX - entity.x;
+  const dy = targetY - entity.y;
+  const dist = Math.hypot(dx, dy);
+  
+  if (dist > 0) {
+    const moveX = (dx / dist) * Math.min(speed, dist);
+    const moveY = (dy / dist) * Math.min(speed, dist);
+    entity.x += moveX;
+    entity.y += moveY;
   }
 }
 
-// ===== NOVA IA: Vilões Selvagens =====
-// Se bater na parede, escolhe uma direção aleatória válida (não fica preso)
-function moveEnemy(enemy) {
-  let nextX = enemy.x + (enemy.dirX * enemy.speed);
-  let nextY = enemy.y + (enemy.dirY * enemy.speed);
-
-  // Testa o movimento atual
-  if (collidesWithWall(nextX, nextY, enemy.r)) {
-    // Se bater, muda de direção aleatoriamente
-    const dirs = [
-      { dx: 1, dy: 0 }, { dx: -1, dy: 0 }, { dx: 0, dy: 1 }, { dx: 0, dy: -1 }
-    ];
-    dirs.sort(() => Math.random() - 0.5);
-    
-    for (let d of dirs) {
-      if (!collidesWithWall(enemy.x + d.dx * enemy.speed, enemy.y + d.dy * enemy.speed, enemy.r)) {
-        enemy.dirX = d.dx;
-        enemy.dirY = d.dy;
-        nextX = enemy.x + d.dx * enemy.speed;
-        nextY = enemy.y + d.dy * enemy.speed;
-        break;
-      }
-    }
-  }
-
-  if (!collidesWithWall(nextX, nextY, enemy.r)) {
-    enemy.x = nextX;
-    enemy.y = nextY;
-  }
-}
-
-// ===== Update Principal =====
 function update() {
   if (winShown) return;
 
@@ -468,31 +443,28 @@ function update() {
     const len = Math.hypot(dx, dy);
     dx = (dx / len) * player.speed;
     dy = (dy / len) * player.speed;
-    
     if (Math.abs(dx) > Math.abs(dy)) player.dir = dx > 0 ? 'right' : 'left';
     else player.dir = dy > 0 ? 'down' : 'up';
-
     if (!collidesWithWall(player.x + dx, player.y, player.r)) player.x += dx;
     if (!collidesWithWall(player.x, player.y + dy, player.r)) player.y += dy;
-    
     player.animTimer += 0.3;
   } else {
     player.animTimer += 0.1;
   }
 
-  // 2. Movimento dos Vilões
+  // 2. Movimento dos Vilões (sistema de grade)
   enemies.forEach(enemy => {
     enemy.animTimer += 0.1;
-    moveEnemy(enemy);
+    updateEnemyGrid(enemy, enemy.speed, false);
   });
 
   rockets.forEach(rocket => {
     rocket.animTimer += 0.1;
-    const currentSpeed = player.invulnerable ? rocket.speed * 0.5 : rocket.speed;
-    moveRocket(rocket, player.x, player.y, currentSpeed);
+    const currentSpeed = player.invulnerable ? rocket.speed * 0.4 : rocket.speed;
+    updateEnemyGrid(rocket, currentSpeed, true);
   });
 
-  // 3. Coleta de Pokébolas (Prioridade)
+  // 3. Coleta de Pokébolas
   items.forEach(item => {
     if (!item.collected) {
       if (Math.hypot(player.x - item.x, player.y - item.y) < player.r + item.r) {
@@ -504,14 +476,14 @@ function update() {
     }
   });
 
-  // 4. Colisão com Vilões
+  // 4. Colisão
   if (!player.invulnerable) {
     let hit = false;
     enemies.forEach(enemy => {
-      if (Math.hypot(player.x - enemy.x, player.y - enemy.y) < player.r + enemy.r) hit = true;
+      if (Math.hypot(player.x - enemy.x, player.y - enemy.y) < player.r + enemy.r - 4) hit = true;
     });
     rockets.forEach(rocket => {
-      if (Math.hypot(player.x - rocket.x, player.y - rocket.y) < player.r + rocket.r) hit = true;
+      if (Math.hypot(player.x - rocket.x, player.y - rocket.y) < player.r + rocket.r - 4) hit = true;
     });
     if (hit) takeDamage();
   }
@@ -525,7 +497,6 @@ function update() {
   }
 }
 
-// ===== Desenho =====
 function drawMap() {
   for (let row = 0; row < MAP_H; row++) {
     for (let col = 0; col < MAP_W; col++) {
@@ -542,12 +513,27 @@ function drawMap() {
   }
 }
 
-function drawSprite(img, x, y, size, flip = false) {
-  if (!img.complete) return;
+// ===== Desenha sprite com fallback (nunca some) =====
+function drawSprite(img, x, y, size, flip = false, fallbackColor = '#ffcc00') {
+  const isLoaded = img && img.complete && img.naturalWidth > 0;
+  
   ctx.save();
   ctx.translate(x, y);
   if (flip) ctx.scale(-1, 1);
-  ctx.drawImage(img, -size/2, -size/2, size, size);
+  
+  if (isLoaded) {
+    ctx.drawImage(img, -size/2, -size/2, size, size);
+  } else {
+    // Fallback: círculo colorido (garante que nunca some)
+    ctx.beginPath();
+    ctx.arc(0, 0, size/2, 0, Math.PI * 2);
+    ctx.fillStyle = fallbackColor;
+    ctx.fill();
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+  
   ctx.restore();
 }
 
@@ -556,18 +542,27 @@ function drawPlayer() {
   const floatOffset = Math.sin(player.animTimer * 3) * 2;
   const size = 36;
   
-  if (currentCharacter === 'pikachu') drawSprite(sprites.pikachu, player.x, player.y + floatOffset, size);
-  else if (currentCharacter === 'charmander') drawSprite(sprites.charmander, player.x, player.y + floatOffset, size);
-  else if (currentCharacter === 'bulbasaur') drawSprite(sprites.bulbasaur, player.x, player.y + floatOffset, size);
-  else if (currentCharacter === 'squirtle') drawSprite(sprites.squirtle, player.x, player.y + floatOffset, size);
+  let color = '#ffcc00';
+  if (currentCharacter === 'pikachu') { 
+    drawSprite(sprites.pikachu, player.x, player.y + floatOffset, size, false, '#ffe033'); 
+  }
+  else if (currentCharacter === 'charmander') { 
+    drawSprite(sprites.charmander, player.x, player.y + floatOffset, size, false, '#ff7f27'); 
+  }
+  else if (currentCharacter === 'bulbasaur') { 
+    drawSprite(sprites.bulbasaur, player.x, player.y + floatOffset, size, false, '#7ec8e3'); 
+  }
+  else if (currentCharacter === 'squirtle') { 
+    drawSprite(sprites.squirtle, player.x, player.y + floatOffset, size, false, '#6eb8e0'); 
+  }
 }
 
 function drawEnemies() {
   enemies.forEach(enemy => {
     const floatOffset = Math.sin(enemy.animTimer * 4) * 3;
     const size = 34;
-    if (enemy.type === 'zubat') drawSprite(sprites.zubat, enemy.x, enemy.y + floatOffset, size);
-    else drawSprite(sprites.koffing, enemy.x, enemy.y + floatOffset, size);
+    if (enemy.type === 'zubat') drawSprite(sprites.zubat, enemy.x, enemy.y + floatOffset, size, false, '#8b7bb8');
+    else drawSprite(sprites.koffing, enemy.x, enemy.y + floatOffset, size, false, '#a0522d');
   });
 }
 
@@ -575,8 +570,8 @@ function drawRockets() {
   rockets.forEach(rocket => {
     const size = 36;
     const flip = rocket.dirX === -1;
-    if (rocket.type === 'jessie') drawSprite(sprites.jessie, rocket.x, rocket.y, size, flip);
-    else drawSprite(sprites.james, rocket.x, rocket.y, size, flip);
+    if (rocket.type === 'jessie') drawSprite(sprites.jessie, rocket.x, rocket.y, size, flip, '#ff69b4');
+    else drawSprite(sprites.james, rocket.x, rocket.y, size, flip, '#4169e1');
   });
 }
 
@@ -588,16 +583,15 @@ function drawTarget() {
   ctx.save();
   ctx.shadowColor = '#ffcc00';
   ctx.shadowBlur = 15;
-  drawSprite(sprites.goldball, target.x, target.y, size);
+  drawSprite(sprites.goldball, target.x, target.y, size, false, '#ffd700');
   ctx.restore();
 }
 
-// ===== Game Loop =====
 function loop() {
   update();
   drawMap();
   items.forEach(item => {
-    if (!item.collected) drawSprite(sprites.pokeball, item.x, item.y, 28);
+    if (!item.collected) drawSprite(sprites.pokeball, item.x, item.y, 28, false, '#ff1c1c');
   });
   drawEnemies();
   drawRockets();
