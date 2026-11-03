@@ -11,6 +11,20 @@
     overflow: hidden; height: 100%;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
   }
+  
+  /* Tela de Loading */
+  #loading-screen {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: #1a1a2e; display: flex; flex-direction: column;
+    justify-content: center; align-items: center; z-index: 100; color: white;
+  }
+  .spinner {
+    border: 8px solid #333; border-top: 8px solid #ffd700;
+    border-radius: 50%; width: 60px; height: 60px;
+    animation: spin 1s linear infinite; margin-bottom: 20px;
+  }
+  @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
   #menu {
     text-align: center; color: white; background: rgba(0,0,0,0.85);
     padding: 30px 20px; border-radius: 20px; border: 4px solid #ffd700;
@@ -59,20 +73,27 @@
 </head>
 <body>
 
-<div id="menu">
+<!-- TELA DE CARREGAMENTO -->
+<div id="loading-screen">
+  <div class="spinner"></div>
+  <h2>Carregando Pokémons...</h2>
+  <p>Aguarde um instante.</p>
+</div>
+
+<div id="menu" style="display: none;">
   <h1>Quem vai explorar hoje?</h1>
   <div class="characters">
     <button class="char-btn" onclick="startGame('pikachu')">
-      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png?v=2" alt="Pikachu"> Pikachu
+      <img src="https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/25.png" alt="Pikachu"> Pikachu
     </button>
     <button class="char-btn" onclick="startGame('charmander')">
-      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/4.png?v=2" alt="Charmander"> Charmander
+      <img src="https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/4.png" alt="Charmander"> Charmander
     </button>
     <button class="char-btn" onclick="startGame('bulbasaur')">
-      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/1.png?v=2" alt="Bulbasaur"> Bulbasaur
+      <img src="https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/1.png" alt="Bulbasaur"> Bulbasaur
     </button>
     <button class="char-btn" onclick="startGame('squirtle')">
-      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/7.png?v=2" alt="Squirtle"> Squirtle
+      <img src="https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/7.png" alt="Squirtle"> Squirtle
     </button>
   </div>
 </div>
@@ -89,7 +110,7 @@
     <div id="win">🎉 Fase Concluída! 🎉<br><button onclick="nextLevel()">Ir para a Próxima Fase</button></div>
     <div id="gameover">💀 Você foi capturado! 💀<br><span style="font-size: 16px; color: #ccc;">Tente novamente!</span><br><button onclick="restartLevel()">Tentar de Novo</button></div>
   </div>
-  <div class="instrucoes">Cuidado com os vilões! Eles te perseguem se chegarem perto.</div>
+  <div class="instrucoes">Cuidado com os vilões! Eles te perseguem se virem você.</div>
 </div>
 
 <script>
@@ -108,17 +129,42 @@ const sprites = {
   pokeball: new Image(), goldball: new Image()
 };
 
-sprites.pikachu.src = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png";
-sprites.charmander.src = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/4.png";
-sprites.bulbasaur.src = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/1.png";
-sprites.squirtle.src = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/7.png";
-sprites.zubat.src = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/41.png";
-sprites.koffing.src = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/109.png";
-sprites.jessie.src = "https://play.pokemonshowdown.com/sprites/trainers/jessie.png";
-sprites.james.src = "https://play.pokemonshowdown.com/sprites/trainers/james.png";
-sprites.pokeball.src = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-ball.png";
-sprites.goldball.src = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/master-ball.png";
+// Usando jsDelivr para garantir que as imagens carreguem rápido e sem bloqueio
+sprites.pikachu.src = "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/25.png";
+sprites.charmander.src = "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/4.png";
+sprites.bulbasaur.src = "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/1.png";
+sprites.squirtle.src = "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/7.png";
+sprites.zubat.src = "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/41.png";
+sprites.koffing.src = "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/109.png";
+// Equipe Rocket (jsDelivr espelho do repositório oficial de sprites do Showdown)
+sprites.jessie.src = "https://cdn.jsdelivr.net/gh/smogon/pokemon-showdown-client@master/play.pokemonshowdown.com/sprites/trainers/jessie.png";
+sprites.james.src = "https://cdn.jsdelivr.net/gh/smogon/pokemon-showdown-client@master/play.pokemonshowdown.com/sprites/trainers/james.png";
+sprites.pokeball.src = "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/items/poke-ball.png";
+sprites.goldball.src = "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/items/master-ball.png";
 
+// ===== Sistema de Carregamento de Imagens =====
+let loadedImages = 0;
+const totalImages = Object.keys(sprites).length;
+
+for (let key in sprites) {
+  sprites[key].onload = () => checkLoad();
+  sprites[key].onerror = () => checkLoad(); // Se falhar, conta como carregado para não travar
+}
+
+function checkLoad() {
+  loadedImages++;
+  if (loadedImages >= totalImages) {
+    document.getElementById('loading-screen').style.display = 'none';
+    document.getElementById('menu').style.display = 'block';
+  }
+}
+// Fallback caso demore muito (5 segundos)
+setTimeout(() => {
+  document.getElementById('loading-screen').style.display = 'none';
+  document.getElementById('menu').style.display = 'block';
+}, 5000);
+
+// ===== Variáveis de Estado =====
 let currentCharacter = 'pikachu';
 let currentLevel = 1;
 let MAP = [];
@@ -134,6 +180,7 @@ let lives = 3;
 let winShown = false;
 let gameLoopId = null;
 
+// ===== Funções do Jogo =====
 function startGame(character) {
   currentCharacter = character;
   currentLevel = 1;
@@ -167,12 +214,10 @@ function updateLivesUI() {
   document.getElementById('lives').innerText = heartStr;
 }
 
-// ===== Helper: Verifica se uma célula é segura para vilões =====
 function isSafeForEnemy(c, r) {
   return !(r === 1 && c === 1) && !(r === MAP_H - 2 && c === MAP_W - 2) && r !== 1 && c !== 1;
 }
 
-// ===== Geração do Labirinto =====
 function generateMaze() {
   MAP = Array.from({ length: MAP_H }, () => Array(MAP_W).fill(1));
   const stack = [];
@@ -202,7 +247,6 @@ function generateMaze() {
     }
   }
 
-  // Posições
   player.x = 1 * TILE + TILE / 2;
   player.y = 1 * TILE + TILE / 2;
   player.dir = 'down';
@@ -212,7 +256,6 @@ function generateMaze() {
   target.y = (MAP_H - 2) * TILE + TILE / 2;
   target.active = false;
 
-  // Células livres
   const emptyCells = [];
   for (let r = 1; r < MAP_H - 1; r++) {
     for (let c = 1; c < MAP_W - 1; c++) {
@@ -223,14 +266,12 @@ function generateMaze() {
   }
   emptyCells.sort(() => Math.random() - 0.5);
 
-  // Pokébolas
   items = [];
   const numItems = Math.min(3 + (currentLevel - 1), Math.floor(emptyCells.length / 2));
   for (let i = 0; i < numItems; i++) {
     items.push({ x: emptyCells[i].c * TILE + TILE / 2, y: emptyCells[i].r * TILE + TILE / 2, r: 12, collected: false });
   }
   
-  // Vilões selvagens (sistema de grid: andam 1 quadrado por vez, alinhados)
   enemies = [];
   const numEnemies = Math.min(1 + Math.floor(currentLevel / 2), 3);
   const enemyTypes = ['zubat', 'koffing'];
@@ -240,24 +281,15 @@ function generateMaze() {
   for (let i = 0; i < numEnemies; i++) {
     const cell = enemyCells[i];
     if (cell) {
-      // Escolhe uma direção inicial válida
       const dirs = [{dx:1,dy:0},{dx:-1,dy:0},{dx:0,dy:1},{dx:0,dy:-1}].sort(() => Math.random() - 0.5);
-      let dir = dirs[0];
       enemies.push({
-        x: cell.c * TILE + TILE / 2, 
-        y: cell.r * TILE + TILE / 2, 
-        r: 14,
-        gridC: cell.c, gridR: cell.r, // Posição na grade (para alinhamento perfeito)
-        type: enemyTypes[i % 2], 
-        animTimer: Math.random() * 10,
-        dirX: dir.dx, dirY: dir.dy,
-        speed: 1.0 + (currentLevel * 0.1),
-        moving: false
+        x: cell.c * TILE + TILE / 2, y: cell.r * TILE + TILE / 2, r: 14,
+        gridC: cell.c, gridR: cell.r, type: enemyTypes[i % 2], animTimer: Math.random() * 10,
+        dirX: dirs[0].dx, dirY: dirs[0].dy, speed: 1.0 + (currentLevel * 0.1)
       });
     }
   }
 
-  // Equipe Rocket
   rockets = [];
   const numRockets = Math.min(Math.floor(currentLevel / 2), 2);
   let rocketCells = emptyCells.filter(cell => isSafeForEnemy(cell.c, cell.r));
@@ -269,12 +301,8 @@ function generateMaze() {
       const dirs = [{dx:1,dy:0},{dx:-1,dy:0},{dx:0,dy:1},{dx:0,dy:-1}].sort(() => Math.random() - 0.5);
       rockets.push({
         x: cell.c * TILE + TILE / 2, y: cell.r * TILE + TILE / 2, r: 14,
-        gridC: cell.c, gridR: cell.r,
-        type: i % 2 === 0 ? 'jessie' : 'james',
-        dirX: dirs[0].dx, dirY: dirs[0].dy,
-        animTimer: Math.random() * 10,
-        speed: 0.9,
-        moving: false
+        gridC: cell.c, gridR: cell.r, type: i % 2 === 0 ? 'jessie' : 'james',
+        dirX: dirs[0].dx, dirY: dirs[0].dy, animTimer: Math.random() * 10, speed: 0.8
       });
     }
   }
@@ -319,10 +347,30 @@ function collidesWithWall(cx, cy, r) {
   return false;
 }
 
-// ===== Verifica se uma célula da grade está livre =====
 function isCellFree(c, r) {
   if (c < 0 || c >= MAP_W || r < 0 || r >= MAP_H) return false;
   return MAP[r][c] === 0;
+}
+
+function hasLineOfSight(c1, r1, c2, r2) {
+  if (c1 !== c2 && r1 !== r2) return false;
+  if (c1 === c2) {
+    const minR = Math.min(r1, r2);
+    const maxR = Math.max(r1, r2);
+    for (let r = minR + 1; r < maxR; r++) {
+      if (MAP[r][c1] === 1) return false;
+    }
+    return true;
+  }
+  if (r1 === r2) {
+    const minC = Math.min(c1, c2);
+    const maxC = Math.max(c1, c2);
+    for (let c = minC + 1; c < maxC; c++) {
+      if (MAP[r1][c] === 1) return false;
+    }
+    return true;
+  }
+  return false;
 }
 
 function takeDamage() {
@@ -342,35 +390,34 @@ function takeDamage() {
   }
 }
 
-// ===== IA baseada em grade (funciona como Pac-Man) =====
+// ===== IA de Grade Consertada =====
 function updateEnemyGrid(entity, speed, chasePlayer = false) {
-  const centerX = entity.gridC * TILE + TILE / 2;
-  const centerY = entity.gridR * TILE + TILE / 2;
+  const targetX = entity.gridC * TILE + TILE / 2;
+  const targetY = entity.gridR * TILE + TILE / 2;
   
-  const distToCenter = Math.hypot(entity.x - centerX, entity.y - centerY);
-  
-  if (distToCenter < 1) {
-    // Está alinhado ao centro da célula: momento de decidir a direção
-    entity.x = centerX;
-    entity.y = centerY;
-    
-    // Verifica se pode continuar na direção atual
+  const dx = targetX - entity.x;
+  const dy = targetY - entity.y;
+  const dist = Math.hypot(dx, dy);
+
+  // Se chegou perto do centro, "snap" pro centro exato e decide a próxima direção
+  if (dist <= speed) {
+    entity.x = targetX;
+    entity.y = targetY;
+
     let canContinue = isCellFree(entity.gridC + entity.dirX, entity.gridR + entity.dirY);
-    
-    // Se está perseguindo o jogador, escolhe a melhor direção
+
     if (chasePlayer) {
       const playerCellC = Math.floor(player.x / TILE);
       const playerCellR = Math.floor(player.y / TILE);
       const distToPlayer = Math.abs(playerCellC - entity.gridC) + Math.abs(playerCellR - entity.gridR);
-      
-      // Só persegue se o jogador estiver a até 4 células de distância (Manhattan)
-      if (distToPlayer <= 4) {
+
+      // Só persegue se estiver perto E tiver linha de visão (sem paredes no meio)
+      if (distToPlayer <= 4 && hasLineOfSight(entity.gridC, entity.gridR, playerCellC, playerCellR)) {
         const possibleDirs = [
           {dx: 1, dy: 0}, {dx: -1, dy: 0}, {dx: 0, dy: 1}, {dx: 0, dy: -1}
         ].filter(d => isCellFree(entity.gridC + d.dx, entity.gridR + d.dy));
-        
+
         if (possibleDirs.length > 0) {
-          // Escolhe a direção que mais aproxima do jogador
           let bestDir = possibleDirs[0];
           let bestDist = Infinity;
           for (let d of possibleDirs) {
@@ -388,8 +435,7 @@ function updateEnemyGrid(entity, speed, chasePlayer = false) {
         }
       }
     }
-    
-    // Se não pode continuar (parede à frente), escolhe outra direção
+
     if (!canContinue) {
       const possibleDirs = [
         {dx: 1, dy: 0}, {dx: -1, dy: 0}, {dx: 0, dy: 1}, {dx: 0, dy: -1}
@@ -403,30 +449,16 @@ function updateEnemyGrid(entity, speed, chasePlayer = false) {
       }
     }
     
-    if (!canContinue) {
-      // Totalmente preso (beco sem saída) - para
-      return;
+    if (canContinue) {
+      entity.gridC += entity.dirX;
+      entity.gridR += entity.dirY;
     }
-    
-    // Atualiza a célula alvo
-    entity.gridC += entity.dirX;
-    entity.gridR += entity.dirY;
+    return; // Sai do frame atual para evitar teleporte
   }
-  
-  // Move em direção ao centro da próxima célula
-  const targetX = entity.gridC * TILE + TILE / 2;
-  const targetY = entity.gridR * TILE + TILE / 2;
-  
-  const dx = targetX - entity.x;
-  const dy = targetY - entity.y;
-  const dist = Math.hypot(dx, dy);
-  
-  if (dist > 0) {
-    const moveX = (dx / dist) * Math.min(speed, dist);
-    const moveY = (dy / dist) * Math.min(speed, dist);
-    entity.x += moveX;
-    entity.y += moveY;
-  }
+
+  // Move suavemente em direção ao alvo
+  entity.x += (dx / dist) * speed;
+  entity.y += (dy / dist) * speed;
 }
 
 function update() {
@@ -452,7 +484,7 @@ function update() {
     player.animTimer += 0.1;
   }
 
-  // 2. Movimento dos Vilões (sistema de grade)
+  // 2. Movimento dos Vilões
   enemies.forEach(enemy => {
     enemy.animTimer += 0.1;
     updateEnemyGrid(enemy, enemy.speed, false);
@@ -460,11 +492,11 @@ function update() {
 
   rockets.forEach(rocket => {
     rocket.animTimer += 0.1;
-    const currentSpeed = player.invulnerable ? rocket.speed * 0.4 : rocket.speed;
+    const currentSpeed = player.invulnerable ? rocket.speed * 0.5 : rocket.speed;
     updateEnemyGrid(rocket, currentSpeed, true);
   });
 
-  // 3. Coleta de Pokébolas
+  // 3. Coleta
   items.forEach(item => {
     if (!item.collected) {
       if (Math.hypot(player.x - item.x, player.y - item.y) < player.r + item.r) {
@@ -480,10 +512,10 @@ function update() {
   if (!player.invulnerable) {
     let hit = false;
     enemies.forEach(enemy => {
-      if (Math.hypot(player.x - enemy.x, player.y - enemy.y) < player.r + enemy.r - 4) hit = true;
+      if (Math.hypot(player.x - enemy.x, player.y - enemy.y) < player.r + enemy.r - 6) hit = true;
     });
     rockets.forEach(rocket => {
-      if (Math.hypot(player.x - rocket.x, player.y - rocket.y) < player.r + rocket.r - 4) hit = true;
+      if (Math.hypot(player.x - rocket.x, player.y - rocket.y) < player.r + rocket.r - 6) hit = true;
     });
     if (hit) takeDamage();
   }
@@ -513,10 +545,8 @@ function drawMap() {
   }
 }
 
-// ===== Desenha sprite com fallback (nunca some) =====
 function drawSprite(img, x, y, size, flip = false, fallbackColor = '#ffcc00') {
   const isLoaded = img && img.complete && img.naturalWidth > 0;
-  
   ctx.save();
   ctx.translate(x, y);
   if (flip) ctx.scale(-1, 1);
@@ -524,16 +554,10 @@ function drawSprite(img, x, y, size, flip = false, fallbackColor = '#ffcc00') {
   if (isLoaded) {
     ctx.drawImage(img, -size/2, -size/2, size, size);
   } else {
-    // Fallback: círculo colorido (garante que nunca some)
-    ctx.beginPath();
-    ctx.arc(0, 0, size/2, 0, Math.PI * 2);
-    ctx.fillStyle = fallbackColor;
-    ctx.fill();
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 2;
-    ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, 0, size/2, 0, Math.PI * 2);
+    ctx.fillStyle = fallbackColor; ctx.fill();
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 2; ctx.stroke();
   }
-  
   ctx.restore();
 }
 
@@ -542,19 +566,10 @@ function drawPlayer() {
   const floatOffset = Math.sin(player.animTimer * 3) * 2;
   const size = 36;
   
-  let color = '#ffcc00';
-  if (currentCharacter === 'pikachu') { 
-    drawSprite(sprites.pikachu, player.x, player.y + floatOffset, size, false, '#ffe033'); 
-  }
-  else if (currentCharacter === 'charmander') { 
-    drawSprite(sprites.charmander, player.x, player.y + floatOffset, size, false, '#ff7f27'); 
-  }
-  else if (currentCharacter === 'bulbasaur') { 
-    drawSprite(sprites.bulbasaur, player.x, player.y + floatOffset, size, false, '#7ec8e3'); 
-  }
-  else if (currentCharacter === 'squirtle') { 
-    drawSprite(sprites.squirtle, player.x, player.y + floatOffset, size, false, '#6eb8e0'); 
-  }
+  if (currentCharacter === 'pikachu') drawSprite(sprites.pikachu, player.x, player.y + floatOffset, size, false, '#ffe033');
+  else if (currentCharacter === 'charmander') drawSprite(sprites.charmander, player.x, player.y + floatOffset, size, false, '#ff7f27');
+  else if (currentCharacter === 'bulbasaur') drawSprite(sprites.bulbasaur, player.x, player.y + floatOffset, size, false, '#7ec8e3');
+  else if (currentCharacter === 'squirtle') drawSprite(sprites.squirtle, player.x, player.y + floatOffset, size, false, '#6eb8e0');
 }
 
 function drawEnemies() {
