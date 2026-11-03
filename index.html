@@ -17,21 +17,21 @@
     box-shadow: 0 0 30px rgba(255, 215, 0, 0.3); z-index: 20;
   }
   #menu h1 { color: #ffd700; margin-top: 0; text-shadow: 2px 2px 4px #000; }
-  .characters { display: flex; gap: 30px; justify-content: center; margin: 30px 0; }
+  .characters { display: flex; gap: 20px; justify-content: center; margin: 30px 0; }
   .char-btn {
-    background: #333; border: 4px solid #555; border-radius: 15px; padding: 20px;
-    cursor: pointer; transition: all 0.2s; color: white; font-size: 20px; font-weight: bold;
-    display: flex; flex-direction: column; align-items: center;
+    background: #333; border: 4px solid #555; border-radius: 15px; padding: 15px;
+    cursor: pointer; transition: all 0.2s; color: white; font-size: 18px; font-weight: bold;
+    display: flex; flex-direction: column; align-items: center; width: 120px;
   }
   .char-btn:hover { transform: scale(1.1); border-color: #ffd700; }
-  .char-btn img { width: 96px; height: 96px; image-rendering: pixelated; margin-bottom: 10px; }
+  .char-btn img { width: 80px; height: 80px; image-rendering: pixelated; margin-bottom: 10px; }
   
   #game-area { display: none; flex-direction: column; align-items: center; position: relative; }
   
   #hud {
-    color: #fff; font-size: 24px; font-weight: bold; margin-bottom: 10px;
+    color: #fff; font-size: 22px; font-weight: bold; margin-bottom: 10px;
     text-shadow: 2px 2px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
-    display: flex; gap: 20px; align-items: center;
+    display: flex; gap: 15px; align-items: center;
   }
   .hud-item { background: rgba(0,0,0,0.7); padding: 5px 15px; border-radius: 8px; border: 2px solid #0f3460; }
   
@@ -78,6 +78,9 @@
     <button class="char-btn" onclick="startGame('bulbasaur')">
       <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/1.png" alt="Bulbasaur"> Bulbasaur
     </button>
+    <button class="char-btn" onclick="startGame('squirtle')">
+      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/7.png" alt="Squirtle"> Squirtle
+    </button>
   </div>
 </div>
 
@@ -118,7 +121,7 @@ canvas.width  = MAP_W * TILE;
 canvas.height = MAP_H * TILE;
 
 const sprites = {
-  pikachu: new Image(), charmander: new Image(), bulbasaur: new Image(),
+  pikachu: new Image(), charmander: new Image(), bulbasaur: new Image(), squirtle: new Image(),
   zubat: new Image(), koffing: new Image(),
   jessie: new Image(), james: new Image(),
   pokeball: new Image(), goldball: new Image()
@@ -127,6 +130,7 @@ const sprites = {
 sprites.pikachu.src = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png";
 sprites.charmander.src = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/4.png";
 sprites.bulbasaur.src = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/1.png";
+sprites.squirtle.src = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/7.png";
 sprites.zubat.src = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/41.png";
 sprites.koffing.src = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/109.png";
 sprites.jessie.src = "https://play.pokemonshowdown.com/sprites/trainers/jessie.png";
@@ -336,52 +340,46 @@ function takeDamage() {
   }
 }
 
-// ===== IA de Perseguição Simples =====
-function moveEntity(entity, targetX, targetY, speed, isRocket) {
-  let dx = 0, dy = 0;
+// ===== IA dos Vilões (Escolhe a melhor direção baseada em paredes e jogador) =====
+function moveRocket(rocket, targetX, targetY, speed) {
+  const dist = Math.hypot(targetX - rocket.x, targetY - rocket.y);
   
-  if (isRocket) {
-    // Lógica de perseguição: Se estiver perto, persegue
-    const dist = Math.hypot(targetX - entity.x, targetY - entity.y);
-    if (dist < TILE * 3.5) { // Raio de visão
-      dx = Math.sign(targetX - entity.x);
-      dy = Math.sign(targetY - entity.y);
+  // Se estiver perto do jogador, tenta perseguir
+  if (dist < TILE * 4) {
+    const dx = Math.sign(targetX - rocket.x);
+    const dy = Math.sign(targetY - rocket.y);
+    
+    // Tenta mover no eixo X ou Y (o que estiver mais perto)
+    if (Math.abs(targetX - rocket.x) > Math.abs(targetY - rocket.y)) {
+      if (!collidesWithWall(rocket.x + dx * speed, rocket.y, rocket.r)) {
+        rocket.x += dx * speed;
+        rocket.dirX = dx;
+        return;
+      }
     } else {
-      // Patrulha normal
-      if (entity.isHorizontal) dx = entity.dirX;
-      else dy = entity.dirY;
+      if (!collidesWithWall(rocket.x, rocket.y + dy * speed, rocket.r)) {
+        rocket.y += dy * speed;
+        rocket.dirY = dy;
+        return;
+      }
     }
+  }
+  
+  // Patrulha normal (se não estiver perseguindo ou não conseguir mover)
+  if (rocket.isHorizontal) {
+    let nextX = rocket.x + rocket.dirX * speed;
+    if (collidesWithWall(nextX, rocket.y, rocket.r)) {
+      rocket.dirX *= -1;
+      nextX = rocket.x + rocket.dirX * speed;
+    }
+    if (!collidesWithWall(nextX, rocket.y, rocket.r)) rocket.x = nextX;
   } else {
-    // Pokémons selvagens andam aleatoriamente
-    dx = entity.dirX;
-    dy = entity.dirY;
-  }
-
-  let nextX = entity.x + dx * speed;
-  let nextY = entity.y + dy * speed;
-
-  // Se bater na parede, inverte a direção
-  if (collidesWithWall(nextX, entity.y, entity.r)) {
-    if (isRocket && Math.abs(targetX - entity.x) < TILE * 3.5) {
-       // Se estiver perseguindo, tenta ir pelo outro eixo
-       nextX = entity.x; 
-    } else {
-       entity.dirX *= -1;
-       nextX = entity.x + (entity.dirX * speed);
+    let nextY = rocket.y + rocket.dirY * speed;
+    if (collidesWithWall(rocket.x, nextY, rocket.r)) {
+      rocket.dirY *= -1;
+      nextY = rocket.y + rocket.dirY * speed;
     }
-  }
-  if (collidesWithWall(entity.x, nextY, entity.r)) {
-    if (isRocket && Math.abs(targetY - entity.y) < TILE * 3.5) {
-       nextY = entity.y;
-    } else {
-       entity.dirY *= -1;
-       nextY = entity.y + (entity.dirY * speed);
-    }
-  }
-
-  if (!collidesWithWall(nextX, nextY, entity.r)) {
-    entity.x = nextX;
-    entity.y = nextY;
+    if (!collidesWithWall(rocket.x, nextY, rocket.r)) rocket.y = nextY;
   }
 }
 
@@ -414,17 +412,31 @@ function update() {
   // 2. Movimento dos Vilões
   enemies.forEach(enemy => {
     enemy.animTimer += 0.1;
-    moveEntity(enemy, player.x, player.y, enemy.speed, false);
+    let nextX = enemy.x + (enemy.dirX * enemy.speed);
+    let nextY = enemy.y + (enemy.dirY * enemy.speed);
+    
+    if (collidesWithWall(nextX, enemy.y, enemy.r)) {
+      enemy.dirX *= -1;
+      nextX = enemy.x + (enemy.dirX * enemy.speed);
+    }
+    if (collidesWithWall(enemy.x, nextY, enemy.r)) {
+      enemy.dirY *= -1;
+      nextY = enemy.y + (enemy.dirY * enemy.speed);
+    }
+    
+    if (!collidesWithWall(nextX, nextY, enemy.r)) {
+      enemy.x = nextX;
+      enemy.y = nextY;
+    }
   });
 
   rockets.forEach(rocket => {
     rocket.animTimer += 0.1;
-    // Se o jogador estiver invencível (tomou dano), os vilões ficam mais lentos
     const currentSpeed = player.invulnerable ? rocket.speed * 0.5 : rocket.speed;
-    moveEntity(rocket, player.x, player.y, currentSpeed, true);
+    moveRocket(rocket, player.x, player.y, currentSpeed);
   });
 
-  // 3. Coleta de Pokébolas (Resolvido o bug de prioridade)
+  // 3. Coleta de Pokébolas (Prioridade antes do dano)
   items.forEach(item => {
     if (!item.collected) {
       if (Math.hypot(player.x - item.x, player.y - item.y) < player.r + item.r) {
@@ -436,7 +448,7 @@ function update() {
     }
   });
 
-  // 4. Colisão com Vilões (Só processa se não acabou de tomar dano)
+  // 4. Colisão com Vilões
   if (!player.invulnerable) {
     let hit = false;
     enemies.forEach(enemy => {
@@ -486,9 +498,11 @@ function drawPlayer() {
   if (player.invulnerable && Math.floor(Date.now() / 100) % 2 === 0) return;
   const floatOffset = Math.sin(player.animTimer * 3) * 2;
   const size = 36;
+  
   if (currentCharacter === 'pikachu') drawSprite(sprites.pikachu, player.x, player.y + floatOffset, size);
   else if (currentCharacter === 'charmander') drawSprite(sprites.charmander, player.x, player.y + floatOffset, size);
-  else drawSprite(sprites.bulbasaur, player.x, player.y + floatOffset, size);
+  else if (currentCharacter === 'bulbasaur') drawSprite(sprites.bulbasaur, player.x, player.y + floatOffset, size);
+  else if (currentCharacter === 'squirtle') drawSprite(sprites.squirtle, player.x, player.y + floatOffset, size);
 }
 
 function drawEnemies() {
