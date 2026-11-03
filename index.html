@@ -15,23 +15,34 @@
     text-align: center; color: white; background: rgba(0,0,0,0.8);
     padding: 40px; border-radius: 20px; border: 4px solid #ffd700;
     box-shadow: 0 0 30px rgba(255, 215, 0, 0.3); z-index: 20;
+    max-width: 90vw;
   }
   #menu h1 { color: #ffd700; margin-top: 0; text-shadow: 2px 2px 4px #000; }
-  .characters { display: flex; gap: 20px; justify-content: center; margin: 30px 0; }
+  
+  .characters { 
+    display: flex; 
+    gap: 15px; 
+    justify-content: center; 
+    margin: 30px 0; 
+    flex-wrap: wrap; /* Permite quebrar linha em telas menores */
+  }
+  
   .char-btn {
-    background: #333; border: 4px solid #555; border-radius: 15px; padding: 15px;
-    cursor: pointer; transition: all 0.2s; color: white; font-size: 18px; font-weight: bold;
-    display: flex; flex-direction: column; align-items: center; width: 120px;
+    background: #333; border: 4px solid #555; border-radius: 15px; padding: 15px 10px;
+    cursor: pointer; transition: all 0.2s; color: white; font-size: 16px; font-weight: bold;
+    display: flex; flex-direction: column; align-items: center; 
+    width: 110px; /* Reduzido para caber 4 lado a lado */
+    box-sizing: border-box;
   }
   .char-btn:hover { transform: scale(1.1); border-color: #ffd700; }
-  .char-btn img { width: 80px; height: 80px; image-rendering: pixelated; margin-bottom: 10px; }
+  .char-btn img { width: 70px; height: 70px; image-rendering: pixelated; margin-bottom: 10px; }
   
   #game-area { display: none; flex-direction: column; align-items: center; position: relative; }
   
   #hud {
     color: #fff; font-size: 22px; font-weight: bold; margin-bottom: 10px;
     text-shadow: 2px 2px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
-    display: flex; gap: 15px; align-items: center;
+    display: flex; gap: 15px; align-items: center; flex-wrap: wrap; justify-content: center;
   }
   .hud-item { background: rgba(0,0,0,0.7); padding: 5px 15px; border-radius: 8px; border: 2px solid #0f3460; }
   
@@ -340,16 +351,13 @@ function takeDamage() {
   }
 }
 
-// ===== IA dos Vilões (Escolhe a melhor direção baseada em paredes e jogador) =====
 function moveRocket(rocket, targetX, targetY, speed) {
   const dist = Math.hypot(targetX - rocket.x, targetY - rocket.y);
   
-  // Se estiver perto do jogador, tenta perseguir
   if (dist < TILE * 4) {
     const dx = Math.sign(targetX - rocket.x);
     const dy = Math.sign(targetY - rocket.y);
     
-    // Tenta mover no eixo X ou Y (o que estiver mais perto)
     if (Math.abs(targetX - rocket.x) > Math.abs(targetY - rocket.y)) {
       if (!collidesWithWall(rocket.x + dx * speed, rocket.y, rocket.r)) {
         rocket.x += dx * speed;
@@ -365,7 +373,6 @@ function moveRocket(rocket, targetX, targetY, speed) {
     }
   }
   
-  // Patrulha normal (se não estiver perseguindo ou não conseguir mover)
   if (rocket.isHorizontal) {
     let nextX = rocket.x + rocket.dirX * speed;
     if (collidesWithWall(nextX, rocket.y, rocket.r)) {
@@ -386,7 +393,6 @@ function moveRocket(rocket, targetX, targetY, speed) {
 function update() {
   if (winShown) return;
 
-  // 1. Movimento do Jogador
   let dx = 0, dy = 0;
   if (keys['ArrowUp'])    dy -= 1;
   if (keys['ArrowDown'])  dy += 1;
@@ -409,7 +415,6 @@ function update() {
     player.animTimer += 0.1;
   }
 
-  // 2. Movimento dos Vilões
   enemies.forEach(enemy => {
     enemy.animTimer += 0.1;
     let nextX = enemy.x + (enemy.dirX * enemy.speed);
@@ -436,7 +441,6 @@ function update() {
     moveRocket(rocket, player.x, player.y, currentSpeed);
   });
 
-  // 3. Coleta de Pokébolas (Prioridade antes do dano)
   items.forEach(item => {
     if (!item.collected) {
       if (Math.hypot(player.x - item.x, player.y - item.y) < player.r + item.r) {
@@ -448,7 +452,6 @@ function update() {
     }
   });
 
-  // 4. Colisão com Vilões
   if (!player.invulnerable) {
     let hit = false;
     enemies.forEach(enemy => {
@@ -460,7 +463,6 @@ function update() {
     if (hit) takeDamage();
   }
 
-  // 5. Vitória
   if (target.active) {
     if (Math.hypot(player.x - target.x, player.y - target.y) < player.r + target.r) {
       winShown = true;
