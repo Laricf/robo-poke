@@ -199,7 +199,7 @@ function updateLivesUI() {
 }
 
 function generateMaze() {
-  // 1. Cria o labirinto perfeito
+  // 1. Cria o labirinto perfeito (corredores e paredes)
   MAP = Array.from({ length: MAP_H }, () => Array(MAP_W).fill(1));
   const stack = [{ x: 1, y: 1 }];
   MAP[1][1] = 0;
@@ -225,24 +225,28 @@ function generateMaze() {
     }
   }
 
-  // ===== 2. ALGORITMO BRAIDED (Quebra de Paredes para criar Rotas de Fuga) =====
+  // ===== 2. CRIAÇÃO DE ROTAS DE FUGA CONTROLADAS =====
+  // Varre o mapa buscando paredes que separam dois caminhos.
+  let wallsToBreak = [];
   for (let r = 1; r < MAP_H - 1; r++) {
     for (let c = 1; c < MAP_W - 1; c++) {
       if (MAP[r][c] === 1) {
-        // Verifica se a parede está entre dois caminhos (horizontal ou vertical)
         const pathLeft = MAP[r][c-1] === 0;
         const pathRight = MAP[r][c+1] === 0;
         const pathUp = MAP[r-1][c] === 0;
         const pathDown = MAP[r+1][c] === 0;
 
-        // Se a parede separa dois caminhos, quebra com 75% de chance
         if ((pathLeft && pathRight) || (pathUp && pathDown)) {
-          if (Math.random() < 0.75) { 
-            MAP[r][c] = 0;
-          }
+          wallsToBreak.push({ c, r });
         }
       }
     }
+  }
+  // Embaralha e destrói apenas 8 paredes. 
+  // O suficiente para não ficar presa, mas mantém o formato de labirinto.
+  wallsToBreak.sort(() => Math.random() - 0.5);
+  for (let i = 0; i < Math.min(8, wallsToBreak.length); i++) {
+    MAP[wallsToBreak[i].r][wallsToBreak[i].c] = 0;
   }
   // ===============================================
 
@@ -488,11 +492,14 @@ function drawMap() {
 
 function drawSprite(img, x, y, size, flip = false, fallbackType = 'pokemon', fallbackColor = '#ffcc00') {
   const isLoaded = img && img.complete && img.naturalWidth > 0;
-  ctx.save(); ctx.translate(x, y); if (flip) ctx.scale(-1, 1);
+  ctx.save(); 
+  ctx.translate(x, y); 
   
   if (isLoaded) {
+    if (flip) ctx.scale(-1, 1);
     ctx.drawImage(img, -size/2, -size/2, size, size);
   } else {
+    // O Fallback não espelha para o texto ficar sempre legível
     if (fallbackType === 'rocket') {
       ctx.fillStyle = '#d32f2f'; 
       ctx.fillRect(-size/2, -size/2, size, size);
