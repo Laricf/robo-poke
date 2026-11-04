@@ -199,7 +199,7 @@ function updateLivesUI() {
 }
 
 function generateMaze() {
-  // 1. Cria o labirinto perfeito (um único caminho)
+  // 1. Cria o labirinto perfeito
   MAP = Array.from({ length: MAP_H }, () => Array(MAP_W).fill(1));
   const stack = [{ x: 1, y: 1 }];
   MAP[1][1] = 0;
@@ -225,18 +225,21 @@ function generateMaze() {
     }
   }
 
-  // ===== 2. A MÁGICA DAS ROTAS DE FUGA (LOOPS) =====
-  // Remove algumas paredes internas para criar caminhos alternativos.
+  // ===== 2. ALGORITMO BRAIDED (Quebra de Paredes para criar Rotas de Fuga) =====
   for (let r = 1; r < MAP_H - 1; r++) {
     for (let c = 1; c < MAP_W - 1; c++) {
       if (MAP[r][c] === 1) {
-        // Se a parede está entre dois caminhos horizontais
-        if (MAP[r][c-1] === 0 && MAP[r][c+1] === 0 && MAP[r-1][c] === 1 && MAP[r+1][c] === 1) {
-          if (Math.random() < 0.35) MAP[r][c] = 0; // 35% de chance de quebrar
-        }
-        // Se a parede está entre dois caminhos verticais
-        else if (MAP[r-1][c] === 0 && MAP[r+1][c] === 0 && MAP[r][c-1] === 1 && MAP[r][c+1] === 1) {
-          if (Math.random() < 0.35) MAP[r][c] = 0;
+        // Verifica se a parede está entre dois caminhos (horizontal ou vertical)
+        const pathLeft = MAP[r][c-1] === 0;
+        const pathRight = MAP[r][c+1] === 0;
+        const pathUp = MAP[r-1][c] === 0;
+        const pathDown = MAP[r+1][c] === 0;
+
+        // Se a parede separa dois caminhos, quebra com 75% de chance
+        if ((pathLeft && pathRight) || (pathUp && pathDown)) {
+          if (Math.random() < 0.75) { 
+            MAP[r][c] = 0;
+          }
         }
       }
     }
@@ -384,7 +387,6 @@ function updateEnemyGrid(entity, speed, chasePlayer = false) {
       const pc = Math.floor(player.x / TILE), pr = Math.floor(player.y / TILE);
       const distToPlayer = Math.abs(pc - entity.gridC) + Math.abs(pr - entity.gridR);
       
-      // Reduzido de 4 para 3 para dar um pequeno alívio ao jogador
       if (distToPlayer <= 3 && hasLineOfSight(entity.gridC, entity.gridR, pc, pr)) {
         const possibleDirs = [{dx: 1, dy: 0}, {dx: -1, dy: 0}, {dx: 0, dy: 1}, {dx: 0, dy: -1}].filter(d => isCellFree(entity.gridC + d.dx, entity.gridR + d.dy));
         if (possibleDirs.length > 0) {
