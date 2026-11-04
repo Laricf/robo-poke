@@ -111,15 +111,16 @@
     <div id="win">🎉 Fase Concluída! 🎉<br><button onclick="nextLevel()">Próxima Fase</button></div>
     <div id="gameover">💀 Capturado! 💀<br><button onclick="restartLevel()">Tentar de Novo</button></div>
   </div>
-  <div class="instrucoes">Use as setas. Cuidado com os vilões!</div>
+  <div class="instrucoes">Use as setas. Fuja dos vilões!</div>
 </div>
 
 <script>
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 const TILE = 50;
-const MAP_W = 15;
-const MAP_H = 11;
+// Aumentei um pouco o mapa para ter mais corredores
+const MAP_W = 17; 
+const MAP_H = 13; 
 canvas.width  = MAP_W * TILE;
 canvas.height = MAP_H * TILE;
 
@@ -199,7 +200,7 @@ function updateLivesUI() {
 }
 
 function generateMaze() {
-  // 1. Cria o labirinto perfeito (corredores e paredes)
+  // 1. Gera um labirinto perfeito (bem fechado)
   MAP = Array.from({ length: MAP_H }, () => Array(MAP_W).fill(1));
   const stack = [{ x: 1, y: 1 }];
   MAP[1][1] = 0;
@@ -225,28 +226,33 @@ function generateMaze() {
     }
   }
 
-  // ===== 2. CRIAÇÃO DE ROTAS DE FUGA CONTROLADAS =====
-  // Varre o mapa buscando paredes que separam dois caminhos.
-  let wallsToBreak = [];
+  // ===== 2. ALGORITMO BRAIDED (Remove becos sem saída mantendo as paredes) =====
   for (let r = 1; r < MAP_H - 1; r++) {
     for (let c = 1; c < MAP_W - 1; c++) {
-      if (MAP[r][c] === 1) {
-        const pathLeft = MAP[r][c-1] === 0;
-        const pathRight = MAP[r][c+1] === 0;
-        const pathUp = MAP[r-1][c] === 0;
-        const pathDown = MAP[r+1][c] === 0;
+      if (MAP[r][c] === 0) {
+        let walls = 0;
+        let validDirs = [];
+        
+        if (MAP[r-1][c] === 1) { walls++; validDirs.push({dr: -1, dc: 0}); }
+        if (MAP[r+1][c] === 1) { walls++; validDirs.push({dr: 1, dc: 0}); }
+        if (MAP[r][c-1] === 1) { walls++; validDirs.push({dr: 0, dc: -1}); }
+        if (MAP[r][c+1] === 1) { walls++; validDirs.push({dr: 0, dc: 1}); }
 
-        if ((pathLeft && pathRight) || (pathUp && pathDown)) {
-          wallsToBreak.push({ c, r });
+        // Se é um beco sem saída (tem 3 paredes ao redor)
+        if (walls >= 3) {
+          // Escolhe uma parede para quebrar (não pode ser a borda externa)
+          const breakableDirs = validDirs.filter(d => {
+            const nr = r + d.dr;
+            const nc = c + d.dc;
+            return nr > 0 && nr < MAP_H - 1 && nc > 0 && nc < MAP_W - 1;
+          });
+          if (breakableDirs.length > 0) {
+            const d = breakableDirs[Math.floor(Math.random() * breakableDirs.length)];
+            MAP[r + d.dr][c + d.dc] = 0;
+          }
         }
       }
     }
-  }
-  // Embaralha e destrói apenas 8 paredes. 
-  // O suficiente para não ficar presa, mas mantém o formato de labirinto.
-  wallsToBreak.sort(() => Math.random() - 0.5);
-  for (let i = 0; i < Math.min(8, wallsToBreak.length); i++) {
-    MAP[wallsToBreak[i].r][wallsToBreak[i].c] = 0;
   }
   // ===============================================
 
@@ -480,9 +486,13 @@ function drawMap() {
   for (let row = 0; row < MAP_H; row++) {
     for (let col = 0; col < MAP_W; col++) {
       if (MAP[row][col] === 1) {
-        ctx.fillStyle = '#2d5a1e'; ctx.fillRect(col * TILE, row * TILE, TILE, TILE);
-        ctx.strokeStyle = '#1f4014'; ctx.strokeRect(col * TILE, row * TILE, TILE, TILE);
+        // Parede com visual de bloco de tijolo/mato
+        ctx.fillStyle = '#4a2e15'; // Marrom escuro
+        ctx.fillRect(col * TILE, row * TILE, TILE, TILE);
+        ctx.fillStyle = '#3a200d'; // Detalhe interno
+        ctx.fillRect(col * TILE + 4, row * TILE + 4, TILE - 8, TILE - 8);
       } else {
+        // Chão
         ctx.fillStyle = (row + col) % 2 === 0 ? '#8fd45a' : '#83c94f';
         ctx.fillRect(col * TILE, row * TILE, TILE, TILE);
       }
@@ -499,7 +509,6 @@ function drawSprite(img, x, y, size, flip = false, fallbackType = 'pokemon', fal
     if (flip) ctx.scale(-1, 1);
     ctx.drawImage(img, -size/2, -size/2, size, size);
   } else {
-    // O Fallback não espelha para o texto ficar sempre legível
     if (fallbackType === 'rocket') {
       ctx.fillStyle = '#d32f2f'; 
       ctx.fillRect(-size/2, -size/2, size, size);
