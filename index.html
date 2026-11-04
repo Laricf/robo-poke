@@ -12,7 +12,6 @@
     display: flex; flex-direction: column; align-items: center; justify-content: center;
   }
   
-  /* Tela de Loading */
   #loading-screen {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     background: #1a1a2e; display: flex; flex-direction: column;
@@ -25,12 +24,11 @@
   }
   @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-  /* Menu Inicial */
   #menu {
     text-align: center; color: white; background: rgba(0,0,0,0.85);
     padding: 30px 20px; border-radius: 20px; border: 4px solid #ffd700;
     box-shadow: 0 0 30px rgba(255, 215, 0, 0.3); z-index: 20; max-width: 95vw;
-    display: none; /* Começa escondido, o JS controla */
+    display: none; 
   }
   #menu h1 { color: #ffd700; margin-top: 0; text-shadow: 2px 2px 4px #000; font-size: 24px; }
   .characters { display: flex; gap: 10px; justify-content: center; margin: 20px 0; flex-wrap: wrap; }
@@ -42,11 +40,10 @@
   .char-btn:hover { transform: scale(1.1); border-color: #ffd700; }
   .char-btn img { width: 60px; height: 60px; image-rendering: pixelated; margin-bottom: 5px; }
   
-  /* Área do Jogo */
   #game-area { display: none; flex-direction: column; align-items: center; position: relative; }
   
   #hud {
-    color: #fff; font-size: 20px; font-weight: bold; margin-bottom: 10px;
+    color: #fff; font-size: 22px; font-weight: bold; margin-bottom: 10px;
     text-shadow: 2px 2px 0 #000;
     display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center;
   }
@@ -56,7 +53,8 @@
     position: relative; border: 6px solid #0f3460; border-radius: 12px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.5); background: #7ec850; overflow: hidden;
   }
-  #game { display: block; image-rendering: pixelated; max-width: 95vw; max-height: 60vh; }
+  /* AUMENTO DO TAMANHO DA TELA */
+  #game { display: block; image-rendering: pixelated; max-width: 95vw; max-height: 75vh; }
   
   #damage-overlay {
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -74,7 +72,7 @@
     border: none; background: #ffd700; cursor: pointer; font-weight: bold;
   }
   #gameover button { background: #ff5555; color: white; }
-  .instrucoes { color: #aaa; font-size: 14px; margin-top: 10px; text-align: center; }
+  .instrucoes { color: #aaa; font-size: 16px; margin-top: 10px; text-align: center; }
 </style>
 </head>
 <body>
@@ -120,7 +118,7 @@
 <script>
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
-const TILE = 40;
+const TILE = 50; // Aumentado de 40 para 50 para deixar tudo maior
 const MAP_W = 15;
 const MAP_H = 11;
 canvas.width  = MAP_W * TILE;
@@ -138,8 +136,8 @@ sprites.bulbasaur.src = "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/spri
 sprites.squirtle.src = "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/7.png";
 sprites.zubat.src = "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/41.png";
 sprites.koffing.src = "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/109.png";
-sprites.jessie.src = "https://cdn.jsdelivr.net/gh/smogon/pokemon-showdown-client@master/play.pokemonshowdown.com/sprites/trainers/jessie.png";
-sprites.james.src = "https://cdn.jsdelivr.net/gh/smogon/pokemon-showdown-client@master/play.pokemonshowdown.com/sprites/trainers/james.png";
+sprites.jessie.src = "https://play.pokemonshowdown.com/sprites/trainers/jessie.png";
+sprites.james.src = "https://play.pokemonshowdown.com/sprites/trainers/james.png";
 sprites.pokeball.src = "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/items/poke-ball.png";
 sprites.goldball.src = "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/items/master-ball.png";
 
@@ -165,14 +163,15 @@ function checkLoad() {
 let currentCharacter = 'pikachu';
 let currentLevel = 1;
 let MAP = [], items = [], enemies = [], rockets = [];
-let player = { x: 0, y: 0, r: 12, speed: 2.8, dir: 'down', animTimer: 0, invulnerable: false };
-let target = { x: 0, y: 0, r: 14, active: false };
+// Aumentando o raio de colisão e velocidade para acompanhar o novo tamanho
+let player = { x: 0, y: 0, r: 18, speed: 3.5, dir: 'down', animTimer: 0, invulnerable: false };
+let target = { x: 0, y: 0, r: 20, active: false };
 let keys = {};
 let score = 0, totalItems = 0, lives = 3;
 let winShown = false, gameLoopId = null;
 
 function startGame(character) {
-  gameStarted = true; // Impede que a tela de loading tente reabrir o menu
+  gameStarted = true; 
   currentCharacter = character;
   currentLevel = 1;
   document.getElementById('level').innerText = currentLevel;
@@ -249,7 +248,7 @@ function generateMaze() {
   items = [];
   const numItems = Math.min(3 + (currentLevel - 1), Math.floor(emptyCells.length / 2));
   for (let i = 0; i < numItems; i++) {
-    items.push({ x: emptyCells[i].c * TILE + TILE / 2, y: emptyCells[i].r * TILE + TILE / 2, r: 12, collected: false });
+    items.push({ x: emptyCells[i].c * TILE + TILE / 2, y: emptyCells[i].r * TILE + TILE / 2, r: 18, collected: false });
   }
   
   enemies = [];
@@ -259,10 +258,10 @@ function generateMaze() {
     if (cell) {
       const dirs = [{dx:1,dy:0},{dx:-1,dy:0},{dx:0,dy:1},{dx:0,dy:-1}].sort(() => Math.random() - 0.5);
       enemies.push({
-        x: cell.c * TILE + TILE / 2, y: cell.r * TILE + TILE / 2, r: 14,
+        x: cell.c * TILE + TILE / 2, y: cell.r * TILE + TILE / 2, r: 18,
         gridC: cell.c, gridR: cell.r, type: i % 2 === 0 ? 'zubat' : 'koffing',
         animTimer: Math.random() * 10, dirX: dirs[0].dx, dirY: dirs[0].dy,
-        speed: 1.0 + (currentLevel * 0.1)
+        speed: 2.0 + (currentLevel * 0.2)
       });
     }
   }
@@ -275,10 +274,10 @@ function generateMaze() {
     if (cell) {
       const dirs = [{dx:1,dy:0},{dx:-1,dy:0},{dx:0,dy:1},{dx:0,dy:-1}].sort(() => Math.random() - 0.5);
       rockets.push({
-        x: cell.c * TILE + TILE / 2, y: cell.r * TILE + TILE / 2, r: 14,
+        x: cell.c * TILE + TILE / 2, y: cell.r * TILE + TILE / 2, r: 18,
         gridC: cell.c, gridR: cell.r, type: i % 2 === 0 ? 'jessie' : 'james',
         animTimer: Math.random() * 10, dirX: dirs[0].dx, dirY: dirs[0].dy,
-        speed: 0.9
+        speed: 1.8
       });
     }
   }
@@ -345,12 +344,10 @@ function takeDamage() {
   }
 }
 
-// ===== IA Corrigida =====
 function updateEnemyGrid(entity, speed, chasePlayer = false) {
   const centerX = entity.gridC * TILE + TILE / 2;
   const centerY = entity.gridR * TILE + TILE / 2;
   
-  // 1. Move em direção ao centro do quadrado alvo
   const dx = centerX - entity.x;
   const dy = centerY - entity.y;
   const dist = Math.hypot(dx, dy);
@@ -362,7 +359,6 @@ function updateEnemyGrid(entity, speed, chasePlayer = false) {
     entity.y += moveY;
   }
 
-  // 2. Se já chegou no centro (ou passou), decide o próximo passo
   if (Math.abs(entity.x - centerX) < 1 && Math.abs(entity.y - centerY) < 1) {
     entity.x = centerX;
     entity.y = centerY;
@@ -373,7 +369,6 @@ function updateEnemyGrid(entity, speed, chasePlayer = false) {
       const pc = Math.floor(player.x / TILE), pr = Math.floor(player.y / TILE);
       const distToPlayer = Math.abs(pc - entity.gridC) + Math.abs(pr - entity.gridR);
       
-      // Só persegue se estiver perto e sem paredes no meio
       if (distToPlayer <= 4 && hasLineOfSight(entity.gridC, entity.gridR, pc, pr)) {
         const possibleDirs = [{dx: 1, dy: 0}, {dx: -1, dy: 0}, {dx: 0, dy: 1}, {dx: 0, dy: -1}].filter(d => isCellFree(entity.gridC + d.dx, entity.gridR + d.dy));
         if (possibleDirs.length > 0) {
@@ -448,7 +443,7 @@ function update() {
   if (!player.invulnerable) {
     let hit = false;
     enemies.concat(rockets).forEach(e => {
-      if (Math.hypot(player.x - e.x, player.y - e.y) < player.r + e.r - 6) hit = true;
+      if (Math.hypot(player.x - e.x, player.y - e.y) < player.r + e.r - 8) hit = true;
     });
     if (hit) takeDamage();
   }
@@ -473,14 +468,33 @@ function drawMap() {
   }
 }
 
-function drawSprite(img, x, y, size, flip = false, fallbackColor = '#ffcc00') {
+// ===== A MÁGICA ACONTECE AQUI: Fallback Inteligente =====
+function drawSprite(img, x, y, size, flip = false, fallbackType = 'pokemon', fallbackColor = '#ffcc00') {
+  const isLoaded = img && img.complete && img.naturalWidth > 0;
   ctx.save(); ctx.translate(x, y); if (flip) ctx.scale(-1, 1);
-  if (img && img.complete && img.naturalWidth > 0) {
+  
+  if (isLoaded) {
     ctx.drawImage(img, -size/2, -size/2, size, size);
   } else {
-    ctx.beginPath(); ctx.arc(0, 0, size/2, 0, Math.PI * 2);
-    ctx.fillStyle = fallbackColor; ctx.fill();
-    ctx.strokeStyle = '#000'; ctx.lineWidth = 2; ctx.stroke();
+    if (fallbackType === 'rocket') {
+      // Plano B da Equipe Rocket: Quadrado vermelho com "R"
+      ctx.fillStyle = '#d32f2f'; 
+      ctx.fillRect(-size/2, -size/2, size, size);
+      ctx.strokeStyle = '#b71c1c'; 
+      ctx.lineWidth = 3;
+      ctx.strokeRect(-size/2, -size/2, size, size);
+      
+      ctx.fillStyle = '#fff';
+      ctx.font = `bold ${size*0.7}px Arial, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('R', 0, 2);
+    } else {
+      // Plano B dos Pokémons: Círculo colorido
+      ctx.beginPath(); ctx.arc(0, 0, size/2, 0, Math.PI * 2);
+      ctx.fillStyle = fallbackColor; ctx.fill();
+      ctx.strokeStyle = '#000'; ctx.lineWidth = 2; ctx.stroke();
+    }
   }
   ctx.restore();
 }
@@ -489,23 +503,28 @@ function drawPlayer() {
   if (player.invulnerable && Math.floor(Date.now() / 100) % 2 === 0) return;
   const fo = Math.sin(player.animTimer * 3) * 2;
   const colors = { pikachu: '#ffe033', charmander: '#ff7f27', bulbasaur: '#7ec8e3', squirtle: '#6eb8e0' };
-  drawSprite(sprites[currentCharacter], player.x, player.y + fo, 36, false, colors[currentCharacter]);
+  drawSprite(sprites[currentCharacter], player.x, player.y + fo, 46, false, 'pokemon', colors[currentCharacter]);
 }
 
 function loop() {
   update();
   drawMap();
-  items.forEach(i => { if (!i.collected) drawSprite(sprites.pokeball, i.x, i.y, 28, false, '#ff1c1c'); });
+  items.forEach(i => { if (!i.collected) drawSprite(sprites.pokeball, i.x, i.y, 36, false, 'pokemon', '#ff1c1c'); });
+  
   enemies.forEach(e => {
     const fo = Math.sin(e.animTimer * 4) * 3;
-    drawSprite(sprites[e.type], e.x, e.y + fo, 34, false, e.type === 'zubat' ? '#8b7bb8' : '#a0522d');
+    drawSprite(sprites[e.type], e.x, e.y + fo, 42, false, 'pokemon', e.type === 'zubat' ? '#8b7bb8' : '#a0522d');
   });
-  rockets.forEach(r => drawSprite(sprites[r.type], r.x, r.y, 36, r.dirX === -1, r.type === 'jessie' ? '#ff69b4' : '#4169e1'));
+  
+  rockets.forEach(r => {
+    // Passando 'rocket' como tipo de fallback
+    drawSprite(sprites[r.type], r.x, r.y, 46, r.dirX === -1, 'rocket');
+  });
   
   if (target.active) {
     const sc = 1 + Math.sin(Date.now() / 200) * 0.15;
     ctx.save(); ctx.shadowColor = '#ffcc00'; ctx.shadowBlur = 15;
-    drawSprite(sprites.goldball, target.x, target.y, 36 * sc, false, '#ffd700');
+    drawSprite(sprites.goldball, target.x, target.y, 46 * sc, false, 'pokemon', '#ffd700');
     ctx.restore();
   }
   
