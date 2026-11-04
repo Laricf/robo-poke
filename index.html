@@ -53,7 +53,6 @@
     position: relative; border: 6px solid #0f3460; border-radius: 12px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.5); background: #7ec850; overflow: hidden;
   }
-  /* AUMENTO DO TAMANHO DA TELA */
   #game { display: block; image-rendering: pixelated; max-width: 95vw; max-height: 75vh; }
   
   #damage-overlay {
@@ -118,7 +117,7 @@
 <script>
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
-const TILE = 50; // Aumentado de 40 para 50 para deixar tudo maior
+const TILE = 50;
 const MAP_W = 15;
 const MAP_H = 11;
 canvas.width  = MAP_W * TILE;
@@ -141,7 +140,6 @@ sprites.james.src = "https://play.pokemonshowdown.com/sprites/trainers/james.png
 sprites.pokeball.src = "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/items/poke-ball.png";
 sprites.goldball.src = "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/items/master-ball.png";
 
-// ===== Carregamento Seguro =====
 let loadedImages = 0;
 let gameStarted = false;
 const totalImages = Object.keys(sprites).length;
@@ -159,11 +157,9 @@ function checkLoad() {
   }
 }
 
-// ===== Variáveis do Jogo =====
 let currentCharacter = 'pikachu';
 let currentLevel = 1;
 let MAP = [], items = [], enemies = [], rockets = [];
-// Aumentando o raio de colisão e velocidade para acompanhar o novo tamanho
 let player = { x: 0, y: 0, r: 18, speed: 3.5, dir: 'down', animTimer: 0, invulnerable: false };
 let target = { x: 0, y: 0, r: 20, active: false };
 let keys = {};
@@ -203,6 +199,7 @@ function updateLivesUI() {
 }
 
 function generateMaze() {
+  // 1. Cria o labirinto perfeito (um único caminho)
   MAP = Array.from({ length: MAP_H }, () => Array(MAP_W).fill(1));
   const stack = [{ x: 1, y: 1 }];
   MAP[1][1] = 0;
@@ -227,6 +224,24 @@ function generateMaze() {
       stack.pop();
     }
   }
+
+  // ===== 2. A MÁGICA DAS ROTAS DE FUGA (LOOPS) =====
+  // Remove algumas paredes internas para criar caminhos alternativos.
+  for (let r = 1; r < MAP_H - 1; r++) {
+    for (let c = 1; c < MAP_W - 1; c++) {
+      if (MAP[r][c] === 1) {
+        // Se a parede está entre dois caminhos horizontais
+        if (MAP[r][c-1] === 0 && MAP[r][c+1] === 0 && MAP[r-1][c] === 1 && MAP[r+1][c] === 1) {
+          if (Math.random() < 0.35) MAP[r][c] = 0; // 35% de chance de quebrar
+        }
+        // Se a parede está entre dois caminhos verticais
+        else if (MAP[r-1][c] === 0 && MAP[r+1][c] === 0 && MAP[r][c-1] === 1 && MAP[r][c+1] === 1) {
+          if (Math.random() < 0.35) MAP[r][c] = 0;
+        }
+      }
+    }
+  }
+  // ===============================================
 
   player.x = 1 * TILE + TILE / 2;
   player.y = 1 * TILE + TILE / 2;
@@ -369,7 +384,8 @@ function updateEnemyGrid(entity, speed, chasePlayer = false) {
       const pc = Math.floor(player.x / TILE), pr = Math.floor(player.y / TILE);
       const distToPlayer = Math.abs(pc - entity.gridC) + Math.abs(pr - entity.gridR);
       
-      if (distToPlayer <= 4 && hasLineOfSight(entity.gridC, entity.gridR, pc, pr)) {
+      // Reduzido de 4 para 3 para dar um pequeno alívio ao jogador
+      if (distToPlayer <= 3 && hasLineOfSight(entity.gridC, entity.gridR, pc, pr)) {
         const possibleDirs = [{dx: 1, dy: 0}, {dx: -1, dy: 0}, {dx: 0, dy: 1}, {dx: 0, dy: -1}].filter(d => isCellFree(entity.gridC + d.dx, entity.gridR + d.dy));
         if (possibleDirs.length > 0) {
           let bestDir = possibleDirs[0], bestDist = Infinity;
@@ -468,7 +484,6 @@ function drawMap() {
   }
 }
 
-// ===== A MÁGICA ACONTECE AQUI: Fallback Inteligente =====
 function drawSprite(img, x, y, size, flip = false, fallbackType = 'pokemon', fallbackColor = '#ffcc00') {
   const isLoaded = img && img.complete && img.naturalWidth > 0;
   ctx.save(); ctx.translate(x, y); if (flip) ctx.scale(-1, 1);
@@ -477,20 +492,15 @@ function drawSprite(img, x, y, size, flip = false, fallbackType = 'pokemon', fal
     ctx.drawImage(img, -size/2, -size/2, size, size);
   } else {
     if (fallbackType === 'rocket') {
-      // Plano B da Equipe Rocket: Quadrado vermelho com "R"
       ctx.fillStyle = '#d32f2f'; 
       ctx.fillRect(-size/2, -size/2, size, size);
-      ctx.strokeStyle = '#b71c1c'; 
-      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#b71c1c'; ctx.lineWidth = 3;
       ctx.strokeRect(-size/2, -size/2, size, size);
-      
       ctx.fillStyle = '#fff';
       ctx.font = `bold ${size*0.7}px Arial, sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText('R', 0, 2);
     } else {
-      // Plano B dos Pokémons: Círculo colorido
       ctx.beginPath(); ctx.arc(0, 0, size/2, 0, Math.PI * 2);
       ctx.fillStyle = fallbackColor; ctx.fill();
       ctx.strokeStyle = '#000'; ctx.lineWidth = 2; ctx.stroke();
@@ -517,7 +527,6 @@ function loop() {
   });
   
   rockets.forEach(r => {
-    // Passando 'rocket' como tipo de fallback
     drawSprite(sprites[r.type], r.x, r.y, 46, r.dirX === -1, 'rocket');
   });
   
