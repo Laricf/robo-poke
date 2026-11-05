@@ -43,17 +43,31 @@
   #game-area { display: none; flex-direction: column; align-items: center; position: relative; }
   
   #hud {
-    color: #fff; font-size: 22px; font-weight: bold; margin-bottom: 10px;
+    color: #fff; font-size: 20px; font-weight: bold; margin-bottom: 10px;
     text-shadow: 2px 2px 0 #000;
     display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center;
   }
-  .hud-item { background: rgba(0,0,0,0.7); padding: 5px 12px; border-radius: 8px; border: 2px solid #0f3460; }
+  .hud-item { background: rgba(0,0,0,0.7); padding: 5px 12px; border-radius: 8px; border: 2px solid #0f3460; display: flex; align-items: center; }
   
+  /* Barra de Poder */
+  .power-bar-bg {
+    width: 100px; height: 18px; background: #333; border: 2px solid #000;
+    border-radius: 10px; margin-left: 8px; overflow: hidden; position: relative;
+  }
+  .power-bar-fill {
+    height: 100%; width: 0%; transition: width 0.1s linear, background-color 0.3s;
+  }
+  .power-text {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    display: flex; justify-content: center; align-items: center;
+    font-size: 11px; color: white; text-shadow: 1px 1px 1px #000;
+  }
+
   #game-container {
     position: relative; border: 6px solid #0f3460; border-radius: 12px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.5); background: #7ec850; overflow: hidden;
   }
-  #game { display: block; image-rendering: pixelated; max-width: 95vw; max-height: 75vh; }
+  #game { display: block; image-rendering: pixelated; max-width: 95vw; max-height: 70vh; }
   
   #damage-overlay {
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -104,6 +118,13 @@
     <div class="hud-item" style="color:#00ffcc">Fase: <span id="level">1</span></div>
     <div class="hud-item" style="color:#ff5555">Pokébolas: <span id="score">0</span> / <span id="total">0</span></div>
     <div class="hud-item" style="color:#ff5555">Vidas: <span id="lives">❤️❤️❤️</span></div>
+    <div class="hud-item" style="color:#ffd700">
+      <span id="power-label">Poder:</span> 
+      <div class="power-bar-bg">
+        <div class="power-bar-fill" id="power-fill"></div>
+        <div class="power-text" id="power-text">0%</div>
+      </div>
+    </div>
   </div>
   <div id="game-container">
     <canvas id="game"></canvas>
@@ -111,14 +132,13 @@
     <div id="win">🎉 Fase Concluída! 🎉<br><button onclick="nextLevel()">Próxima Fase</button></div>
     <div id="gameover">💀 Capturado! 💀<br><button onclick="restartLevel()">Tentar de Novo</button></div>
   </div>
-  <div class="instrucoes">Use as setas. Fuja dos vilões!</div>
+  <div class="instrucoes">Use as setas. Ande para carregar o poder e aperte <b>ESPAÇO</b> para atacar!</div>
 </div>
 
 <script>
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 const TILE = 50;
-// Aumentei um pouco o mapa para ter mais corredores
 const MAP_W = 17; 
 const MAP_H = 13; 
 canvas.width  = MAP_W * TILE;
@@ -167,11 +187,23 @@ let keys = {};
 let score = 0, totalItems = 0, lives = 3;
 let winShown = false, gameLoopId = null;
 
+// Variáveis do Poder
+let power = 0;
+const MAX_POWER = 100;
+let powerWave = 0; 
+let powerCooldown = 0;
+let attackParticles = []; // Novo sistema de partículas
+
 function startGame(character) {
   gameStarted = true; 
   currentCharacter = character;
   currentLevel = 1;
   document.getElementById('level').innerText = currentLevel;
+  
+  // Atualiza o HUD com o tipo do personagem
+  const labels = { pikachu: 'Elétrico', charmander: 'Fogo', bulbasaur: 'Planta', squirtle: 'Água' };
+  document.getElementById('power-label').innerText = `Poder (${labels[currentCharacter]}):`;
+
   document.getElementById('menu').style.display = 'none';
   document.getElementById('game-area').style.display = 'flex';
   startLevel();
@@ -188,7 +220,12 @@ function restartLevel() { startLevel(); }
 
 function startLevel() {
   lives = 3;
+  power = 0;
+  powerWave = 0;
+  powerCooldown = 0;
+  attackParticles = [];
   updateLivesUI();
+  updatePowerUI();
   generateMaze();
 }
 
@@ -199,8 +236,23 @@ function updateLivesUI() {
   document.getElementById('lives').innerText = heartStr;
 }
 
+function updatePowerUI() {
+  const fill = document.getElementById('power-fill');
+  const text = document.getElementById('power-text');
+  fill.style.width = power + '%';
+  text.innerText = Math.floor(power) + '%';
+  
+  // Muda a cor da barra de acordo com o personagem
+  const colors = { 
+    pikachu: 'linear-gradient(90deg, #ffd700, #ffff00)', 
+    charmander: 'linear-gradient(90deg, #ff4500, #ff8c00)', 
+    bulbasaur: 'linear-gradient(90deg, #32cd32, #98fb98)', 
+    squirtle: 'linear-gradient(90deg, #00bfff, #87ceeb)' 
+  };
+  fill.style.background = colors[currentCharacter];
+}
+
 function generateMaze() {
-  // 1. Gera um labirinto perfeito (bem fechado)
   MAP = Array.from({ length: MAP_H }, () => Array(MAP_W).fill(1));
   const stack = [{ x: 1, y: 1 }];
   MAP[1][1] = 0;
@@ -226,21 +278,18 @@ function generateMaze() {
     }
   }
 
-  // ===== 2. ALGORITMO BRAIDED (Remove becos sem saída mantendo as paredes) =====
+  // Remove becos sem saída
   for (let r = 1; r < MAP_H - 1; r++) {
     for (let c = 1; c < MAP_W - 1; c++) {
       if (MAP[r][c] === 0) {
         let walls = 0;
         let validDirs = [];
-        
         if (MAP[r-1][c] === 1) { walls++; validDirs.push({dr: -1, dc: 0}); }
         if (MAP[r+1][c] === 1) { walls++; validDirs.push({dr: 1, dc: 0}); }
         if (MAP[r][c-1] === 1) { walls++; validDirs.push({dr: 0, dc: -1}); }
         if (MAP[r][c+1] === 1) { walls++; validDirs.push({dr: 0, dc: 1}); }
 
-        // Se é um beco sem saída (tem 3 paredes ao redor)
         if (walls >= 3) {
-          // Escolhe uma parede para quebrar (não pode ser a borda externa)
           const breakableDirs = validDirs.filter(d => {
             const nr = r + d.dr;
             const nc = c + d.dc;
@@ -254,7 +303,6 @@ function generateMaze() {
       }
     }
   }
-  // ===============================================
 
   player.x = 1 * TILE + TILE / 2;
   player.y = 1 * TILE + TILE / 2;
@@ -322,7 +370,7 @@ function generateMaze() {
 window.addEventListener('keydown', e => {
   const k = e.code || e.key;
   keys[k] = true;
-  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(k)) e.preventDefault();
+  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(k)) e.preventDefault();
 });
 window.addEventListener('keyup', e => {
   keys[e.code || e.key] = false;
@@ -430,6 +478,7 @@ function updateEnemyGrid(entity, speed, chasePlayer = false) {
 function update() {
   if (winShown) return;
 
+  // 1. Movimento e Carregamento de Poder
   let dx = 0, dy = 0;
   if (keys['ArrowUp'])    dy -= 1;
   if (keys['ArrowDown'])  dy += 1;
@@ -442,13 +491,76 @@ function update() {
     dy = (dy / len) * player.speed;
     if (Math.abs(dx) > Math.abs(dy)) player.dir = dx > 0 ? 'right' : 'left';
     else player.dir = dy > 0 ? 'down' : 'up';
-    if (!collidesWithWall(player.x + dx, player.y, player.r)) player.x += dx;
-    if (!collidesWithWall(player.x, player.y + dy, player.r)) player.y += dy;
-    player.animTimer += 0.3;
+    
+    let moved = false;
+    if (!collidesWithWall(player.x + dx, player.y, player.r)) { player.x += dx; moved = true; }
+    if (!collidesWithWall(player.x, player.y + dy, player.r)) { player.y += dy; moved = true; }
+    
+    if (moved) {
+      player.animTimer += 0.3;
+      if (power < MAX_POWER) {
+        power = Math.min(MAX_POWER, power + 0.8);
+        updatePowerUI();
+      }
+    }
   } else {
     player.animTimer += 0.1;
   }
 
+  // 2. Uso do Poder
+  if (powerCooldown > 0) powerCooldown--;
+  
+  if (keys['Space'] && power >= MAX_POWER && powerCooldown <= 0) {
+    power = 0;
+    powerCooldown = 60;
+    powerWave = 10;
+    updatePowerUI();
+
+    // Define as cores das partículas de acordo com o Pokémon
+    let c1, c2;
+    if (currentCharacter === 'pikachu') { c1 = '#ffff00'; c2 = '#ffffff'; } // Raio
+    else if (currentCharacter === 'charmander') { c1 = '#ff4500'; c2 = '#ffcc00'; } // Fogo
+    else if (currentCharacter === 'squirtle') { c1 = '#00bfff'; c2 = '#e0ffff'; } // Água
+    else { c1 = '#32cd32'; c2 = '#98fb98'; } // Planta
+
+    // Gera 30 partículas explodindo
+    for (let i = 0; i < 30; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = Math.random() * 6 + 2;
+      attackParticles.push({
+        x: player.x, y: player.y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 1.0,
+        color: Math.random() > 0.5 ? c1 : c2,
+        size: Math.random() * 6 + 4
+      });
+    }
+
+    // Mata inimigos no raio
+    const blastRadius = TILE * 2.5;
+    enemies = enemies.filter(e => Math.hypot(player.x - e.x, player.y - e.y) > blastRadius);
+    rockets = rockets.filter(r => Math.hypot(player.x - r.x, player.y - r.y) > blastRadius);
+  }
+
+  // Atualiza Efeito Visual
+  if (powerWave > 0) {
+    powerWave += 15;
+    if (powerWave > TILE * 3) powerWave = 0;
+  }
+
+  // Atualiza Partículas
+  for (let i = attackParticles.length - 1; i >= 0; i--) {
+    let p = attackParticles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vx *= 0.95; // Desacelera
+    p.vy *= 0.95;
+    p.life -= 0.04;
+    if (p.life <= 0) attackParticles.splice(i, 1);
+  }
+
+  // 3. Movimento dos Vilões
   enemies.forEach(enemy => {
     enemy.animTimer += 0.1;
     updateEnemyGrid(enemy, enemy.speed, false);
@@ -459,6 +571,7 @@ function update() {
     updateEnemyGrid(rocket, rocket.speed, true);
   });
 
+  // 4. Coleta
   items.forEach(item => {
     if (!item.collected && Math.hypot(player.x - item.x, player.y - item.y) < player.r + item.r) {
       item.collected = true;
@@ -468,6 +581,7 @@ function update() {
     }
   });
 
+  // 5. Colisão
   if (!player.invulnerable) {
     let hit = false;
     enemies.concat(rockets).forEach(e => {
@@ -476,6 +590,7 @@ function update() {
     if (hit) takeDamage();
   }
 
+  // 6. Vitória
   if (target.active && Math.hypot(player.x - target.x, player.y - target.y) < player.r + target.r) {
     winShown = true;
     document.getElementById('win').style.display = 'block';
@@ -486,13 +601,9 @@ function drawMap() {
   for (let row = 0; row < MAP_H; row++) {
     for (let col = 0; col < MAP_W; col++) {
       if (MAP[row][col] === 1) {
-        // Parede com visual de bloco de tijolo/mato
-        ctx.fillStyle = '#4a2e15'; // Marrom escuro
-        ctx.fillRect(col * TILE, row * TILE, TILE, TILE);
-        ctx.fillStyle = '#3a200d'; // Detalhe interno
-        ctx.fillRect(col * TILE + 4, row * TILE + 4, TILE - 8, TILE - 8);
+        ctx.fillStyle = '#4a2e15'; ctx.fillRect(col * TILE, row * TILE, TILE, TILE);
+        ctx.fillStyle = '#3a200d'; ctx.fillRect(col * TILE + 4, row * TILE + 4, TILE - 8, TILE - 8);
       } else {
-        // Chão
         ctx.fillStyle = (row + col) % 2 === 0 ? '#8fd45a' : '#83c94f';
         ctx.fillRect(col * TILE, row * TILE, TILE, TILE);
       }
@@ -531,12 +642,28 @@ function drawPlayer() {
   if (player.invulnerable && Math.floor(Date.now() / 100) % 2 === 0) return;
   const fo = Math.sin(player.animTimer * 3) * 2;
   const colors = { pikachu: '#ffe033', charmander: '#ff7f27', bulbasaur: '#7ec8e3', squirtle: '#6eb8e0' };
-  drawSprite(sprites[currentCharacter], player.x, player.y + fo, 46, false, 'pokemon', colors[currentCharacter]);
+  
+  // Se o poder estiver cheio, pisca com a cor do elemento
+  let shadowColor = '#ffd700';
+  if (currentCharacter === 'charmander') shadowColor = '#ff4500';
+  else if (currentCharacter === 'bulbasaur') shadowColor = '#32cd32';
+  else if (currentCharacter === 'squirtle') shadowColor = '#00bfff';
+
+  if (power >= MAX_POWER && Math.floor(Date.now() / 150) % 2 === 0) {
+    ctx.save();
+    ctx.shadowColor = shadowColor;
+    ctx.shadowBlur = 20;
+    drawSprite(sprites[currentCharacter], player.x, player.y + fo, 46, false, 'pokemon', colors[currentCharacter]);
+    ctx.restore();
+  } else {
+    drawSprite(sprites[currentCharacter], player.x, player.y + fo, 46, false, 'pokemon', colors[currentCharacter]);
+  }
 }
 
 function loop() {
   update();
   drawMap();
+  
   items.forEach(i => { if (!i.collected) drawSprite(sprites.pokeball, i.x, i.y, 36, false, 'pokemon', '#ff1c1c'); });
   
   enemies.forEach(e => {
@@ -554,6 +681,59 @@ function loop() {
     drawSprite(sprites.goldball, target.x, target.y, 46 * sc, false, 'pokemon', '#ffd700');
     ctx.restore();
   }
+  
+  // Desenha o Efeito Visual (Onda de choque)
+  if (powerWave > 0) {
+    ctx.save();
+    let strokeColor1, strokeColor2;
+    
+    if (currentCharacter === 'pikachu') { 
+      strokeColor1 = `rgba(255, 255, 0, `; strokeColor2 = `rgba(255, 255, 255, `;
+    } else if (currentCharacter === 'charmander') { 
+      strokeColor1 = `rgba(255, 69, 0, `; strokeColor2 = `rgba(255, 204, 0, `;
+    } else if (currentCharacter === 'squirtle') { 
+      strokeColor1 = `rgba(0, 191, 255, `; strokeColor2 = `rgba(224, 255, 255, `;
+    } else { 
+      strokeColor1 = `rgba(50, 205, 50, `; strokeColor2 = `rgba(152, 251, 152, `;
+    }
+
+    const alpha = 1 - powerWave / (TILE * 3);
+    
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, powerWave, 0, Math.PI * 2);
+    ctx.strokeStyle = strokeColor1 + alpha + ')';
+    ctx.lineWidth = 8;
+    ctx.stroke();
+    
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, powerWave * 0.8, 0, Math.PI * 2);
+    ctx.strokeStyle = strokeColor2 + alpha + ')';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+    
+    ctx.restore();
+  }
+
+  // Desenha as Partículas
+  attackParticles.forEach(p => {
+    ctx.globalAlpha = p.life;
+    ctx.fillStyle = p.color;
+    
+    if (currentCharacter === 'pikachu') {
+      // Raio (quadradinhos)
+      ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
+    } else if (currentCharacter === 'charmander') {
+      // Fogo (círculos que crescem um pouco)
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
+    } else if (currentCharacter === 'squirtle') {
+      // Água (gotas - círculos menores)
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.size * 0.7, 0, Math.PI*2); ctx.fill();
+    } else {
+      // Planta (folhas - elipses)
+      ctx.beginPath(); ctx.ellipse(p.x, p.y, p.size, p.size/2, p.vx, 0, Math.PI*2); ctx.fill();
+    }
+  });
+  ctx.globalAlpha = 1.0; // Reseta a transparência
   
   drawPlayer();
   gameLoopId = requestAnimationFrame(loop);
