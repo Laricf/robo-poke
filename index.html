@@ -10,11 +10,8 @@
     height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white;
   }
   
-  #loading { position: fixed; inset: 0; background: #1a1a2e; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; }
-  .spin { border: 8px solid #333; border-top: 8px solid #ffd700; border-radius: 50%; width: 60px; height: 60px; animation: s 1s linear infinite; margin-bottom: 20px; }
-  @keyframes s { to { transform: rotate(360deg); } }
-  
-  #menu { display: none; text-align: center; background: rgba(0,0,0,0.85); padding: 30px; border-radius: 20px; border: 4px solid #ffd700; z-index: 20; }
+  /* O Menu já aparece de cara */
+  #menu { text-align: center; background: rgba(0,0,0,0.85); padding: 30px; border-radius: 20px; border: 4px solid #ffd700; z-index: 20; }
   .chars { display: flex; gap: 15px; justify-content: center; margin-top: 20px; flex-wrap: wrap; }
   .btn { background: #333; border: 3px solid #555; border-radius: 10px; padding: 10px; cursor: pointer; color: white; font-weight: bold; display: flex; flex-direction: column; align-items: center; transition: 0.2s; }
   .btn:hover { transform: scale(1.1); border-color: #ffd700; }
@@ -22,17 +19,21 @@
 
   #game { display: none; flex-direction: column; align-items: center; width: 100%; }
   
+  /* HUD */
   #hud { display: flex; gap: 10px; margin-bottom: 10px; font-weight: bold; text-shadow: 2px 2px 0 #000; flex-wrap: wrap; justify-content: center; font-size: 18px; }
   .box { background: rgba(0,0,0,0.8); padding: 6px 14px; border-radius: 8px; border: 2px solid #0f3460; display: flex; align-items: center; gap: 5px; }
   
+  /* Contador de Bola Dourada */
   .gold-box { background: rgba(50, 40, 0, 0.9); border: 2px solid #ffd700; border-radius: 8px; padding: 4px 12px; display: flex; align-items: center; gap: 8px; }
   .gold-box img { width: 28px; height: 28px; image-rendering: pixelated; animation: pulse 1s infinite alternate; }
   @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.2); } }
 
+  /* Barra de Poder */
   .pbg { width: 100px; height: 20px; background: #333; border: 2px solid #000; border-radius: 10px; overflow: hidden; position: relative; }
   .pfill { height: 100%; width: 0%; transition: 0.1s; }
   .ptext { position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; font-size: 12px; color: white; text-shadow: 1px 1px 1px #000; }
 
+  /* Tela do Jogo Grande */
   #container { 
     position: relative; border: 8px solid #0f3460; border-radius: 16px; background: #7ec850; overflow: hidden; 
     width: 95vw; max-width: 1200px; 
@@ -48,8 +49,7 @@
 </head>
 <body>
 
-<div id="loading"><div class="spin"></div><h2>Carregando...</h2></div>
-
+<!-- SEM TELA DE LOADING! O MENU APARECE DIRETO -->
 <div id="menu">
   <h1>Quem vai evoluir hoje?</h1>
   <div class="chars">
@@ -111,31 +111,7 @@ img.james.src="https://play.pokemonshowdown.com/sprites/trainers/james.png";
 img.ball.src="https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/items/poke-ball.png";
 img.gold.src="https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/items/master-ball.png";
 
-// ===== CARREGAMENTO À PROVA DE FALHAS =====
-let loaded = 0;
-let gameStarted = false;
-for (let k in img) { 
-  img[k].onload = () => { loaded++; checkReady(); }; 
-  img[k].onerror = () => { loaded++; checkReady(); }; // Se falhar, ignora para não travar
-}
-function checkReady() {
-  if(loaded >= 14 && !gameStarted) {
-    gameStarted = true;
-    document.getElementById('loading').style.display='none'; 
-    document.getElementById('menu').style.display='block';
-  }
-}
-// Plano B: Se demorar mais de 3 segundos, abre o menu mesmo sem as imagens
-setTimeout(() => {
-  if(!gameStarted) {
-    gameStarted = true;
-    document.getElementById('loading').style.display='none'; 
-    document.getElementById('menu').style.display='block';
-  }
-}, 3000);
-// ==========================================
-
-let started = false, char = 'pikachu', isEvolved = false, goldCount = 0;
+let char = 'pikachu', isEvolved = false, goldCount = 0;
 let lvl = 1, lives = 3, score = 0, tot = 0;
 let map = [], items = [], goldBalls = [], enemies = [], rockets = [], particles = [], popupTexts = [];
 let p = { x: 0, y: 0, r: 18, spd: 3.5, timer: 0, inv: false };
@@ -146,12 +122,13 @@ window.onkeydown = e => { keys[e.code] = true; if(['ArrowUp','ArrowDown','ArrowL
 window.onkeyup = e => { keys[e.code] = false; };
 
 function start(c) {
-  started = true; char = c; lvl = 1; isEvolved = false; goldCount = 0;
+  char = c; lvl = 1; isEvolved = false; goldCount = 0;
   document.getElementById('lvl').innerText = lvl;
   document.getElementById('gold-ui').innerText = goldCount;
-  document.getElementById('menu').style.display = 'none'; document.getElementById('game').style.display = 'flex';
+  document.getElementById('menu').style.display = 'none'; 
+  document.getElementById('game').style.display = 'flex';
   initLevel();
-  if(!window.reqId) loop();
+  if(!window.reqId) loop(); // Inicia o jogo
 }
 
 function reset() { 
@@ -165,9 +142,10 @@ function reset() {
 
 function initLevel() {
   lives = 3; power = 0; wave = 0; cool = 0; particles = []; popupTexts = [];
-  goldBalls = []; goldTimer = 300; 
+  goldBalls = []; goldTimer = 300; // 5 segundos para a primeira bola
   updateLives(); updatePower();
   
+  // Cria Labirinto
   map = Array.from({length: MH}, () => Array(MW).fill(1));
   let stack = [{x:1, y:1}]; map[1][1] = 0;
   let dirs = [{x:0,y:-2},{x:0,y:2},{x:-2,y:0},{x:2,y:0}];
@@ -180,6 +158,7 @@ function initLevel() {
     if(nb.length) { let n = nb[Math.floor(Math.random()*nb.length)]; map[n.py][n.px]=0; map[n.y][n.x]=0; stack.push({x:n.x, y:n.y}); } else stack.pop();
   }
   
+  // Quebra becos sem saída
   for(let r=1; r<MH-1; r++) for(let c=1; c<MW-1; c++) {
     if(map[r][c]===0) {
       let w=0, v=[];
@@ -269,11 +248,12 @@ function update() {
   let dx=0, dy=0;
   if(keys['ArrowUp']) dy--; if(keys['ArrowDown']) dy++; if(keys['ArrowLeft']) dx--; if(keys['ArrowRight']) dx++;
   
-  let moveu = false; // Verifica se o personagem realmente mudou de posição
+  let moveu = false; // Flag de validação para o poder
 
   if(dx!==0 || dy!==0) {
     let l=Math.hypot(dx,dy); dx=(dx/l)*p.spd; dy=(dy/l)*p.spd;
     
+    // Se a parede barrar, moveu fica false
     if(!wall(p.x+dx, p.y, p.r)) { p.x+=dx; moveu = true; }
     if(!wall(p.x, p.y+dy, p.r)) { p.y+=dy; moveu = true; }
     
@@ -314,7 +294,7 @@ function update() {
     if(txt.life <= 0) popupTexts.splice(i,1);
   }
 
-  // BOLAS DOURADAS
+  // Aparecer Bola Dourada
   if(!isEvolved && goldCount < 5 && goldBalls.length === 0) {
     goldTimer--;
     if(goldTimer <= 0) {
@@ -329,6 +309,7 @@ function update() {
     }
   }
 
+  // Coletar Bola Dourada
   for(let i=goldBalls.length-1; i>=0; i--) {
     let b = goldBalls[i];
     if(Math.hypot(p.x-b.x, p.y-b.y) < p.r + b.r) {
@@ -375,6 +356,7 @@ function sprite(im, x, y, s, flip=false, isRocket=false) {
 }
 
 function draw() {
+  // Mapa
   for(let r=0; r<MH; r++) for(let c=0; c<MW; c++) {
     ctx.fillStyle = map[r][c]===1 ? '#4a2e15' : ((r+c)%2===0?'#8fd45a':'#83c94f');
     ctx.fillRect(c*T, r*T, T, T);
