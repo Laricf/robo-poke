@@ -7,7 +7,6 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: #1a1a2e; font-family: sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; }
   
-  /* MENU NA TELA - SEM TELA DE LOADING */
   #menu { text-align: center; background: rgba(0,0,0,0.85); padding: 30px; border-radius: 20px; border: 4px solid #ffd700; z-index: 20; }
   .chars { display: flex; gap: 15px; justify-content: center; margin-top: 20px; flex-wrap: wrap; }
   .btn { background: #333; border: 3px solid #555; border-radius: 10px; padding: 10px; cursor: pointer; color: white; font-weight: bold; display: flex; flex-direction: column; align-items: center; transition: 0.2s; }
@@ -27,8 +26,8 @@
   .pfill { height: 100%; width: 0%; transition: 0.1s; }
   .ptext { position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; font-size: 12px; color: white; text-shadow: 1px 1px 1px #000; }
 
-  #container { position: relative; border: 8px solid #0f3460; border-radius: 16px; background: #7ec850; overflow: hidden; width: 95vw; max-width: 1200px; box-shadow: 0 15px 40px rgba(0,0,0,0.6); }
-  canvas { display: block; width: 100%; height: auto; image-rendering: pixelated; }
+  #container { position: relative; border: 8px solid #0f3460; border-radius: 16px; background: #7ec850; overflow: hidden; width: 98vw; max-width: 1200px; max-height: 85vh; box-shadow: 0 15px 40px rgba(0,0,0,0.6); display: flex; justify-content: center; }
+  canvas { display: block; width: 100%; height: auto; image-rendering: pixelated; object-fit: contain; }
   
   #dmg { position: absolute; inset: 0; background: rgba(255,0,0,0.4); display: none; z-index: 5; pointer-events: none; }
   #end { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); background: rgba(0,0,0,0.95); padding: 30px 50px; border-radius: 15px; text-align: center; border: 4px solid #ffd700; display: none; z-index: 10; white-space: nowrap; font-size: 24px; }
@@ -63,7 +62,7 @@
   <div id="container">
     <canvas id="cv"></canvas>
     <div id="dmg"></div>
-    <div id="end"><span id="endTxt"></span><br><button onclick="resetGame()">Continuar</button></div>
+    <div id="end"><span id="endTxt"></span><br><button onclick="continuar()">Continuar</button></div>
   </div>
   <div class="inst">Setas para andar | ESPAÇO para atacar | Pegue 5 Bolas Douradas para EVOLUIR!</div>
 </div>
@@ -101,12 +100,13 @@ let map = [], items = [], goldBalls = [], enemies = [], rockets = [], particles 
 let p = { x: 0, y: 0, r: 18, spd: 3.5, timer: 0, inv: false };
 let target = { x: 0, y: 0, r: 20, active: false };
 let keys = {}, power = 0, wave = 0, cool = 0, goldTimer = 300, win = false;
+let gameWon = false; // Flag que define se o jogador ganhou ou perdeu a fase
 
 window.onkeydown = e => { keys[e.code] = true; if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault(); };
 window.onkeyup = e => { keys[e.code] = false; };
 
 function startGame(c) {
-  char = c; lvl = 1; isEvolved = false; goldCount = 0;
+  char = c; lvl = 1; isEvolved = false; goldCount = 0; win = false; gameWon = false;
   document.getElementById('lvl').innerText = lvl;
   document.getElementById('gold-ui').innerText = goldCount;
   document.getElementById('menu').style.display = 'none'; 
@@ -115,20 +115,31 @@ function startGame(c) {
   requestAnimationFrame(loop);
 }
 
-function resetGame() { 
-  if(lives <= 0) { 
-    lvl = 1; isEvolved = false; goldCount = 0; 
-    document.getElementById('lvl').innerText = lvl; 
-    document.getElementById('gold-ui').innerText = goldCount; 
-  } 
+// CORREÇÃO: Função que gerencia o botão Continuar (Avança de Fase se ganhou)
+function continuar() { 
+  if (gameWon) {
+    lvl++; // Avança a fase
+  }
+  
+  // Reseta os status para a nova tentativa
+  lives = 3; 
+  isEvolved = false; // Volta a ser o Pokémon base para evoluir de novo
+  goldCount = 0; 
+  win = false;
+  gameWon = false;
+  
+  document.getElementById('lvl').innerText = lvl; 
+  document.getElementById('gold-ui').innerText = goldCount; 
+  
   initLevel(); 
 }
 
 function initLevel() {
-  lives = 3; power = 0; wave = 0; cool = 0; particles = []; popupTexts = [];
-  goldBalls = []; goldTimer = 300; 
+  power = 0; wave = 0; cool = 0; particles = []; popupTexts = [];
+  goldBalls = []; goldTimer = 300; // 5 segundos para a primeira bola dourada
   updateLives(); updatePower();
   
+  // Gera Labirinto
   map = Array.from({length: MH}, () => Array(MW).fill(1));
   let stack = [{x:1, y:1}]; map[1][1] = 0;
   let dirs = [{x:0,y:-2},{x:0,y:2},{x:-2,y:0},{x:2,y:0}];
@@ -141,6 +152,7 @@ function initLevel() {
     if(nb.length) { let n = nb[Math.floor(Math.random()*nb.length)]; map[n.py][n.px]=0; map[n.y][n.x]=0; stack.push({x:n.x, y:n.y}); } else stack.pop();
   }
   
+  // Quebra becos sem saída
   for(let r=1; r<MH-1; r++) for(let c=1; c<MW-1; c++) {
     if(map[r][c]===0) {
       let w=0, v=[];
@@ -152,6 +164,7 @@ function initLevel() {
 
   p.x = 1*T+T/2; p.y = 1*T+T/2; p.inv = false;
   target.x = (MW-2)*T+T/2; target.y = (MH-2)*T+T/2; target.active = false;
+  
   let cells = [];
   for(let r=1; r<MH-1; r++) for(let c=1; c<MW-1; c++) if(map[r][c]===0 && !(r===1&&c===1) && !(r===MH-2&&c===MW-2)) cells.push({c,r});
   cells.sort(() => Math.random()-0.5);
@@ -173,8 +186,9 @@ function initLevel() {
     rockets.push({x:c.c*T+T/2, y:c.r*T+T/2, r:18, gc:c.c, gr:c.r, type:i%2===0?'jessie':'james', tm:Math.random()*10, dx:d.dx, dy:d.dy, spd:1.8});
   }
   
-  score = 0; win = false;
-  document.getElementById('sc').innerText = score; document.getElementById('tot').innerText = tot;
+  score = 0; 
+  document.getElementById('sc').innerText = score; 
+  document.getElementById('tot').innerText = tot;
   document.getElementById('gold-ui').innerText = goldCount;
   document.getElementById('end').style.display = 'none';
   document.getElementById('dmg').style.display = 'none';
@@ -200,13 +214,20 @@ function sight(c1, r1, c2, r2) {
   else { for(let c=Math.min(c1,c2)+1; c<Math.max(c1,c2); c++) if(map[r1][c]===1) return false; }
   return true;
 }
+
 function hit() {
   p.inv = true; lives--; updateLives(); document.getElementById('dmg').style.display='block';
   setTimeout(()=>document.getElementById('dmg').style.display='none', 200);
   p.x = 1*T+T/2; p.y = 1*T+T/2;
-  if(lives<=0) { win=true; document.getElementById('endTxt').innerText="💀 Capturado!"; document.getElementById('end').style.display='block'; }
-  else setTimeout(()=>p.inv=false, 1500);
+  if(lives<=0) { 
+    win=true; gameWon = false; // PERDEU
+    document.getElementById('endTxt').innerText="💀 Capturado!"; 
+    document.getElementById('end').style.display='block'; 
+  } else {
+    setTimeout(()=>p.inv=false, 1500);
+  }
 }
+
 function moveAI(e, spd, chase) {
   let cx = e.gc*T+T/2, cy = e.gr*T+T/2, dx = cx-e.x, dy = cy-e.y, d = Math.hypot(dx,dy);
   if(d>0) { e.x += (dx/d)*Math.min(spd,d); e.y += (dy/d)*Math.min(spd,d); }
@@ -234,6 +255,8 @@ function update() {
 
   if(dx!==0 || dy!==0) {
     let l=Math.hypot(dx,dy); dx=(dx/l)*p.spd; dy=(dy/l)*p.spd;
+    
+    // Só carrega a energia se realmente mudar de posição
     if(!wall(p.x+dx, p.y, p.r)) { p.x+=dx; moveu = true; }
     if(!wall(p.x, p.y+dy, p.r)) { p.y+=dy; moveu = true; }
     
@@ -273,6 +296,7 @@ function update() {
     if(txt.life <= 0) popupTexts.splice(i,1);
   }
 
+  // Aparecer Bola Dourada
   if(!isEvolved && goldCount < 5 && goldBalls.length === 0) {
     goldTimer--;
     if(goldTimer <= 0) {
@@ -287,6 +311,7 @@ function update() {
     }
   }
 
+  // Coletar Bola Dourada
   for(let i=goldBalls.length-1; i>=0; i--) {
     let b = goldBalls[i];
     if(Math.hypot(p.x-b.x, p.y-b.y) < p.r + b.r) {
@@ -309,7 +334,12 @@ function update() {
   enemies.forEach(e=>{ e.tm+=0.1; moveAI(e, e.spd, false); });
   rockets.forEach(e=>{ e.tm+=0.1; moveAI(e, e.spd, true); });
   items.forEach(i=>{
-    if(!i.got && Math.hypot(p.x-i.x, p.y-i.y)<p.r+i.r) { i.got=true; score++; document.getElementById('sc').innerText=score; if(score===tot) target.active=true; }
+    if(!i.got && Math.hypot(p.x-i.x, p.y-i.y)<p.r+i.r) { 
+      i.got=true; 
+      score++; 
+      document.getElementById('sc').innerText=score; 
+      if(score===tot) target.active=true; 
+    }
   });
   
   if(!p.inv) {
@@ -317,8 +347,12 @@ function update() {
     if(h) hit();
   }
   
+  // Condição de Vitória
   if(target.active && Math.hypot(p.x-target.x, p.y-target.y)<p.r+target.r) {
-    win=true; document.getElementById('endTxt').innerText="🎉 Fase Concluída!"; document.getElementById('end').style.display='block';
+    win=true; 
+    gameWon = true; // GANHOU A FASE
+    document.getElementById('endTxt').innerText="🎉 Fase Concluída!"; 
+    document.getElementById('end').style.display='block';
   }
 }
 
