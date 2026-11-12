@@ -43,7 +43,7 @@
   #game-area { display: none; flex-direction: column; align-items: center; position: relative; }
   
   #hud {
-    color: #fff; font-size: 20px; font-weight: bold; margin-bottom: 10px;
+    color: #fff; font-size: 22px; font-weight: bold; margin-bottom: 10px;
     text-shadow: 2px 2px 0 #000;
     display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center;
   }
@@ -63,11 +63,19 @@
     font-size: 11px; color: white; text-shadow: 1px 1px 1px #000;
   }
 
+  /* NOVO: Container do Jogo bem maior */
   #game-container {
     position: relative; border: 6px solid #0f3460; border-radius: 12px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.5); background: #7ec850; overflow: hidden;
+    display: flex; justify-content: center; align-items: center;
   }
-  #game { display: block; image-rendering: pixelated; max-width: 95vw; max-height: 70vh; }
+  #game { 
+    display: block; image-rendering: pixelated; 
+    width: 98vw; /* Ocupa quase toda a largura */
+    max-width: 1000px; /* Mas não deixa ficar esticado demais */
+    height: auto;
+    max-height: 85vh; 
+  }
   
   #damage-overlay {
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -117,6 +125,7 @@
   <div id="hud">
     <div class="hud-item" style="color:#00ffcc">Fase: <span id="level">1</span></div>
     <div class="hud-item" style="color:#ff5555">Pokébolas: <span id="score">0</span> / <span id="total">0</span></div>
+    <div class="hud-item" style="color:#ffd700">Evolução: <span id="evo-count">0</span>/5</div>
     <div class="hud-item" style="color:#ff5555">Vidas: <span id="lives">❤️❤️❤️</span></div>
     <div class="hud-item" style="color:#ffd700">
       <span id="power-label">Poder:</span> 
@@ -132,7 +141,7 @@
     <div id="win">🎉 Fase Concluída! 🎉<br><button onclick="nextLevel()">Próxima Fase</button></div>
     <div id="gameover">💀 Capturado! 💀<br><button onclick="restartLevel()">Tentar de Novo</button></div>
   </div>
-  <div class="instrucoes">Use as setas. Ande para carregar o poder e aperte <b>ESPAÇO</b> para atacar!</div>
+  <div class="instrucoes">Use as setas. Ande para carregar o poder, aperte <b>ESPAÇO</b> para atacar e pegue <b>5 BOLAS DOURADAS</b> para evoluir!</div>
 </div>
 
 <script>
@@ -145,15 +154,22 @@ canvas.width  = MAP_W * TILE;
 canvas.height = MAP_H * TILE;
 
 const sprites = {
-  pikachu: new Image(), charmander: new Image(), bulbasaur: new Image(), squirtle: new Image(),
+  pikachu: new Image(), raichu: new Image(),
+  charmander: new Image(), charmeleon: new Image(),
+  bulbasaur: new Image(), ivysaur: new Image(),
+  squirtle: new Image(), wartortle: new Image(),
   zubat: new Image(), koffing: new Image(), jessie: new Image(), james: new Image(),
   pokeball: new Image(), goldball: new Image()
 };
 
 sprites.pikachu.src = "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/25.png";
+sprites.raichu.src = "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/26.png";
 sprites.charmander.src = "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/4.png";
+sprites.charmeleon.src = "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/5.png";
 sprites.bulbasaur.src = "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/1.png";
+sprites.ivysaur.src = "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/2.png";
 sprites.squirtle.src = "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/7.png";
+sprites.wartortle.src = "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/8.png";
 sprites.zubat.src = "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/41.png";
 sprites.koffing.src = "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/109.png";
 sprites.jessie.src = "https://play.pokemonshowdown.com/sprites/trainers/jessie.png";
@@ -179,28 +195,32 @@ function checkLoad() {
 }
 
 let currentCharacter = 'pikachu';
+let isEvolved = false;
+let evoCount = 0;
 let currentLevel = 1;
-let MAP = [], items = [], enemies = [], rockets = [];
+let MAP = [], items = [], evoBalls = [], enemies = [], rockets = [];
 let player = { x: 0, y: 0, r: 18, speed: 3.5, dir: 'down', animTimer: 0, invulnerable: false };
 let target = { x: 0, y: 0, r: 20, active: false };
 let keys = {};
 let score = 0, totalItems = 0, lives = 3;
 let winShown = false, gameLoopId = null;
 
-// Variáveis do Poder
 let power = 0;
 const MAX_POWER = 100;
 let powerWave = 0; 
 let powerCooldown = 0;
-let attackParticles = []; // Novo sistema de partículas
+let attackParticles = []; 
+let evoSpawnTimer = 0;
 
 function startGame(character) {
   gameStarted = true; 
   currentCharacter = character;
+  isEvolved = false;
+  evoCount = 0;
   currentLevel = 1;
   document.getElementById('level').innerText = currentLevel;
+  document.getElementById('evo-count').innerText = evoCount;
   
-  // Atualiza o HUD com o tipo do personagem
   const labels = { pikachu: 'Elétrico', charmander: 'Fogo', bulbasaur: 'Planta', squirtle: 'Água' };
   document.getElementById('power-label').innerText = `Poder (${labels[currentCharacter]}):`;
 
@@ -224,6 +244,8 @@ function startLevel() {
   powerWave = 0;
   powerCooldown = 0;
   attackParticles = [];
+  evoBalls = [];
+  evoSpawnTimer = 300; // Primeira bola dourada aparece depois de um tempo
   updateLivesUI();
   updatePowerUI();
   generateMaze();
@@ -242,7 +264,6 @@ function updatePowerUI() {
   fill.style.width = power + '%';
   text.innerText = Math.floor(power) + '%';
   
-  // Muda a cor da barra de acordo com o personagem
   const colors = { 
     pikachu: 'linear-gradient(90deg, #ffd700, #ffff00)', 
     charmander: 'linear-gradient(90deg, #ff4500, #ff8c00)', 
@@ -278,7 +299,6 @@ function generateMaze() {
     }
   }
 
-  // Remove becos sem saída
   for (let r = 1; r < MAP_H - 1; r++) {
     for (let c = 1; c < MAP_W - 1; c++) {
       if (MAP[r][c] === 0) {
@@ -478,7 +498,7 @@ function updateEnemyGrid(entity, speed, chasePlayer = false) {
 function update() {
   if (winShown) return;
 
-  // 1. Movimento e Carregamento de Poder
+  // 1. Movimento do Jogador (COM CHECAGEM CORRETA DE MOVIMENTO)
   let dx = 0, dy = 0;
   if (keys['ArrowUp'])    dy -= 1;
   if (keys['ArrowDown'])  dy += 1;
@@ -492,11 +512,15 @@ function update() {
     if (Math.abs(dx) > Math.abs(dy)) player.dir = dx > 0 ? 'right' : 'left';
     else player.dir = dy > 0 ? 'down' : 'up';
     
-    let moved = false;
-    if (!collidesWithWall(player.x + dx, player.y, player.r)) { player.x += dx; moved = true; }
-    if (!collidesWithWall(player.x, player.y + dy, player.r)) { player.y += dy; moved = true; }
+    // Guarda a posição antiga para ver se realmente andou
+    const oldX = player.x;
+    const oldY = player.y;
+
+    if (!collidesWithWall(player.x + dx, player.y, player.r)) player.x += dx;
+    if (!collidesWithWall(player.x, player.y + dy, player.r)) player.y += dy;
     
-    if (moved) {
+    // Só carrega o poder e anima se a posição mudou
+    if (player.x !== oldX || player.y !== oldY) {
       player.animTimer += 0.3;
       if (power < MAX_POWER) {
         power = Math.min(MAX_POWER, power + 0.8);
@@ -516,14 +540,12 @@ function update() {
     powerWave = 10;
     updatePowerUI();
 
-    // Define as cores das partículas de acordo com o Pokémon
     let c1, c2;
-    if (currentCharacter === 'pikachu') { c1 = '#ffff00'; c2 = '#ffffff'; } // Raio
-    else if (currentCharacter === 'charmander') { c1 = '#ff4500'; c2 = '#ffcc00'; } // Fogo
-    else if (currentCharacter === 'squirtle') { c1 = '#00bfff'; c2 = '#e0ffff'; } // Água
-    else { c1 = '#32cd32'; c2 = '#98fb98'; } // Planta
+    if (currentCharacter === 'pikachu') { c1 = '#ffff00'; c2 = '#ffffff'; }
+    else if (currentCharacter === 'charmander') { c1 = '#ff4500'; c2 = '#ffcc00'; }
+    else if (currentCharacter === 'squirtle') { c1 = '#00bfff'; c2 = '#e0ffff'; }
+    else { c1 = '#32cd32'; c2 = '#98fb98'; }
 
-    // Gera 30 partículas explodindo
     for (let i = 0; i < 30; i++) {
       const angle = Math.random() * Math.PI * 2;
       const speed = Math.random() * 6 + 2;
@@ -537,30 +559,67 @@ function update() {
       });
     }
 
-    // Mata inimigos no raio
     const blastRadius = TILE * 2.5;
     enemies = enemies.filter(e => Math.hypot(player.x - e.x, player.y - e.y) > blastRadius);
     rockets = rockets.filter(r => Math.hypot(player.x - r.x, player.y - r.y) > blastRadius);
   }
 
-  // Atualiza Efeito Visual
   if (powerWave > 0) {
     powerWave += 15;
     if (powerWave > TILE * 3) powerWave = 0;
   }
 
-  // Atualiza Partículas
   for (let i = attackParticles.length - 1; i >= 0; i--) {
     let p = attackParticles[i];
     p.x += p.vx;
     p.y += p.vy;
-    p.vx *= 0.95; // Desacelera
+    p.vx *= 0.95; 
     p.vy *= 0.95;
     p.life -= 0.04;
     if (p.life <= 0) attackParticles.splice(i, 1);
   }
 
-  // 3. Movimento dos Vilões
+  // 3. Spawn e Coleta de Bolas Douradas
+  if (!isEvolved && evoBalls.length === 0 && evoCount < 5) {
+    evoSpawnTimer--;
+    if (evoSpawnTimer <= 0) {
+      // Escolhe um local aleatório livre no mapa
+      let attempts = 0;
+      while (attempts < 100) {
+        const rc = Math.floor(Math.random() * (MAP_W - 2)) + 1;
+        const rr = Math.floor(Math.random() * (MAP_H - 2)) + 1;
+        if (MAP[rr][rc] === 0) {
+          evoBalls.push({
+            x: rc * TILE + TILE / 2,
+            y: rr * TILE + TILE / 2,
+            r: 18
+          });
+          break;
+        }
+        attempts++;
+      }
+    }
+  }
+
+  for (let i = evoBalls.length - 1; i >= 0; i--) {
+    const ball = evoBalls[i];
+    if (Math.hypot(player.x - ball.x, player.y - ball.y) < player.r + ball.r) {
+      evoBalls.splice(i, 1);
+      evoCount++;
+      document.getElementById('evo-count').innerText = evoCount;
+      evoSpawnTimer = 400; // Demora um pouco para a próxima aparecer
+
+      if (evoCount >= 5 && !isEvolved) {
+        isEvolved = true;
+        player.speed = 4.5; // Fica mais rápido
+        // Bônus: enche o poder instantaneamente
+        power = MAX_POWER;
+        updatePowerUI();
+      }
+    }
+  }
+
+  // 4. Movimento dos Vilões
   enemies.forEach(enemy => {
     enemy.animTimer += 0.1;
     updateEnemyGrid(enemy, enemy.speed, false);
@@ -571,173 +630,6 @@ function update() {
     updateEnemyGrid(rocket, rocket.speed, true);
   });
 
-  // 4. Coleta
+  // 5. Coleta de Pokébolas normais
   items.forEach(item => {
-    if (!item.collected && Math.hypot(player.x - item.x, player.y - item.y) < player.r + item.r) {
-      item.collected = true;
-      score++;
-      document.getElementById('score').innerText = score;
-      if (score === totalItems) target.active = true;
-    }
-  });
-
-  // 5. Colisão
-  if (!player.invulnerable) {
-    let hit = false;
-    enemies.concat(rockets).forEach(e => {
-      if (Math.hypot(player.x - e.x, player.y - e.y) < player.r + e.r - 8) hit = true;
-    });
-    if (hit) takeDamage();
-  }
-
-  // 6. Vitória
-  if (target.active && Math.hypot(player.x - target.x, player.y - target.y) < player.r + target.r) {
-    winShown = true;
-    document.getElementById('win').style.display = 'block';
-  }
-}
-
-function drawMap() {
-  for (let row = 0; row < MAP_H; row++) {
-    for (let col = 0; col < MAP_W; col++) {
-      if (MAP[row][col] === 1) {
-        ctx.fillStyle = '#4a2e15'; ctx.fillRect(col * TILE, row * TILE, TILE, TILE);
-        ctx.fillStyle = '#3a200d'; ctx.fillRect(col * TILE + 4, row * TILE + 4, TILE - 8, TILE - 8);
-      } else {
-        ctx.fillStyle = (row + col) % 2 === 0 ? '#8fd45a' : '#83c94f';
-        ctx.fillRect(col * TILE, row * TILE, TILE, TILE);
-      }
-    }
-  }
-}
-
-function drawSprite(img, x, y, size, flip = false, fallbackType = 'pokemon', fallbackColor = '#ffcc00') {
-  const isLoaded = img && img.complete && img.naturalWidth > 0;
-  ctx.save(); 
-  ctx.translate(x, y); 
-  
-  if (isLoaded) {
-    if (flip) ctx.scale(-1, 1);
-    ctx.drawImage(img, -size/2, -size/2, size, size);
-  } else {
-    if (fallbackType === 'rocket') {
-      ctx.fillStyle = '#d32f2f'; 
-      ctx.fillRect(-size/2, -size/2, size, size);
-      ctx.strokeStyle = '#b71c1c'; ctx.lineWidth = 3;
-      ctx.strokeRect(-size/2, -size/2, size, size);
-      ctx.fillStyle = '#fff';
-      ctx.font = `bold ${size*0.7}px Arial, sans-serif`;
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText('R', 0, 2);
-    } else {
-      ctx.beginPath(); ctx.arc(0, 0, size/2, 0, Math.PI * 2);
-      ctx.fillStyle = fallbackColor; ctx.fill();
-      ctx.strokeStyle = '#000'; ctx.lineWidth = 2; ctx.stroke();
-    }
-  }
-  ctx.restore();
-}
-
-function drawPlayer() {
-  if (player.invulnerable && Math.floor(Date.now() / 100) % 2 === 0) return;
-  const fo = Math.sin(player.animTimer * 3) * 2;
-  const colors = { pikachu: '#ffe033', charmander: '#ff7f27', bulbasaur: '#7ec8e3', squirtle: '#6eb8e0' };
-  
-  // Se o poder estiver cheio, pisca com a cor do elemento
-  let shadowColor = '#ffd700';
-  if (currentCharacter === 'charmander') shadowColor = '#ff4500';
-  else if (currentCharacter === 'bulbasaur') shadowColor = '#32cd32';
-  else if (currentCharacter === 'squirtle') shadowColor = '#00bfff';
-
-  if (power >= MAX_POWER && Math.floor(Date.now() / 150) % 2 === 0) {
-    ctx.save();
-    ctx.shadowColor = shadowColor;
-    ctx.shadowBlur = 20;
-    drawSprite(sprites[currentCharacter], player.x, player.y + fo, 46, false, 'pokemon', colors[currentCharacter]);
-    ctx.restore();
-  } else {
-    drawSprite(sprites[currentCharacter], player.x, player.y + fo, 46, false, 'pokemon', colors[currentCharacter]);
-  }
-}
-
-function loop() {
-  update();
-  drawMap();
-  
-  items.forEach(i => { if (!i.collected) drawSprite(sprites.pokeball, i.x, i.y, 36, false, 'pokemon', '#ff1c1c'); });
-  
-  enemies.forEach(e => {
-    const fo = Math.sin(e.animTimer * 4) * 3;
-    drawSprite(sprites[e.type], e.x, e.y + fo, 42, false, 'pokemon', e.type === 'zubat' ? '#8b7bb8' : '#a0522d');
-  });
-  
-  rockets.forEach(r => {
-    drawSprite(sprites[r.type], r.x, r.y, 46, r.dirX === -1, 'rocket');
-  });
-  
-  if (target.active) {
-    const sc = 1 + Math.sin(Date.now() / 200) * 0.15;
-    ctx.save(); ctx.shadowColor = '#ffcc00'; ctx.shadowBlur = 15;
-    drawSprite(sprites.goldball, target.x, target.y, 46 * sc, false, 'pokemon', '#ffd700');
-    ctx.restore();
-  }
-  
-  // Desenha o Efeito Visual (Onda de choque)
-  if (powerWave > 0) {
-    ctx.save();
-    let strokeColor1, strokeColor2;
-    
-    if (currentCharacter === 'pikachu') { 
-      strokeColor1 = `rgba(255, 255, 0, `; strokeColor2 = `rgba(255, 255, 255, `;
-    } else if (currentCharacter === 'charmander') { 
-      strokeColor1 = `rgba(255, 69, 0, `; strokeColor2 = `rgba(255, 204, 0, `;
-    } else if (currentCharacter === 'squirtle') { 
-      strokeColor1 = `rgba(0, 191, 255, `; strokeColor2 = `rgba(224, 255, 255, `;
-    } else { 
-      strokeColor1 = `rgba(50, 205, 50, `; strokeColor2 = `rgba(152, 251, 152, `;
-    }
-
-    const alpha = 1 - powerWave / (TILE * 3);
-    
-    ctx.beginPath();
-    ctx.arc(player.x, player.y, powerWave, 0, Math.PI * 2);
-    ctx.strokeStyle = strokeColor1 + alpha + ')';
-    ctx.lineWidth = 8;
-    ctx.stroke();
-    
-    ctx.beginPath();
-    ctx.arc(player.x, player.y, powerWave * 0.8, 0, Math.PI * 2);
-    ctx.strokeStyle = strokeColor2 + alpha + ')';
-    ctx.lineWidth = 4;
-    ctx.stroke();
-    
-    ctx.restore();
-  }
-
-  // Desenha as Partículas
-  attackParticles.forEach(p => {
-    ctx.globalAlpha = p.life;
-    ctx.fillStyle = p.color;
-    
-    if (currentCharacter === 'pikachu') {
-      // Raio (quadradinhos)
-      ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
-    } else if (currentCharacter === 'charmander') {
-      // Fogo (círculos que crescem um pouco)
-      ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
-    } else if (currentCharacter === 'squirtle') {
-      // Água (gotas - círculos menores)
-      ctx.beginPath(); ctx.arc(p.x, p.y, p.size * 0.7, 0, Math.PI*2); ctx.fill();
-    } else {
-      // Planta (folhas - elipses)
-      ctx.beginPath(); ctx.ellipse(p.x, p.y, p.size, p.size/2, p.vx, 0, Math.PI*2); ctx.fill();
-    }
-  });
-  ctx.globalAlpha = 1.0; // Reseta a transparência
-  
-  drawPlayer();
-  gameLoopId = requestAnimationFrame(loop);
-}
-</script>
-</body>
-</html>
+    if (!item
