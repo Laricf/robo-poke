@@ -5,643 +5,334 @@
 <title>Poké-Robô: Caçada Infinita</title>
 <style>
   * { box-sizing: border-box; }
-  html, body {
+  body {
     margin: 0; padding: 0; background: #1a1a2e;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    overflow: hidden; height: 100%;
+    font-family: sans-serif; overflow: hidden; height: 100vh;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
+    color: white;
   }
   
-  #loading-screen {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: #1a1a2e; display: flex; flex-direction: column;
-    justify-content: center; align-items: center; z-index: 100; color: white;
-  }
-  .spinner {
-    border: 8px solid #333; border-top: 8px solid #ffd700;
-    border-radius: 50%; width: 60px; height: 60px;
-    animation: spin 1s linear infinite; margin-bottom: 20px;
-  }
-  @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  #loading { position: fixed; inset: 0; background: #1a1a2e; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; }
+  .spin { border: 8px solid #333; border-top: 8px solid #ffd700; border-radius: 50%; width: 60px; height: 60px; animation: s 1s linear infinite; margin-bottom: 20px; }
+  @keyframes s { to { transform: rotate(360deg); } }
 
-  #menu {
-    text-align: center; color: white; background: rgba(0,0,0,0.85);
-    padding: 30px 20px; border-radius: 20px; border: 4px solid #ffd700;
-    box-shadow: 0 0 30px rgba(255, 215, 0, 0.3); z-index: 20; max-width: 95vw;
-    display: none; 
-  }
-  #menu h1 { color: #ffd700; margin-top: 0; text-shadow: 2px 2px 4px #000; font-size: 24px; }
-  .characters { display: flex; gap: 10px; justify-content: center; margin: 20px 0; flex-wrap: wrap; }
-  .char-btn {
-    background: #333; border: 3px solid #555; border-radius: 12px; padding: 10px;
-    cursor: pointer; transition: all 0.2s; color: white; font-size: 14px; font-weight: bold;
-    display: flex; flex-direction: column; align-items: center; width: 100px;
-  }
-  .char-btn:hover { transform: scale(1.1); border-color: #ffd700; }
-  .char-btn img { width: 60px; height: 60px; image-rendering: pixelated; margin-bottom: 5px; }
+  #menu { display: none; text-align: center; background: rgba(0,0,0,0.85); padding: 30px; border-radius: 20px; border: 4px solid #ffd700; z-index: 20; }
+  .chars { display: flex; gap: 15px; justify-content: center; margin-top: 20px; flex-wrap: wrap; }
+  .btn { background: #333; border: 3px solid #555; border-radius: 10px; padding: 10px; cursor: pointer; color: white; font-weight: bold; display: flex; flex-direction: column; align-items: center; transition: 0.2s; }
+  .btn:hover { transform: scale(1.1); border-color: #ffd700; }
+  .btn img { width: 64px; height: 64px; image-rendering: pixelated; margin-bottom: 5px; }
   
-  #game-area { display: none; flex-direction: column; align-items: center; position: relative; }
+  #game { display: none; flex-direction: column; align-items: center; }
+  #hud { display: flex; gap: 8px; margin-bottom: 8px; font-weight: bold; text-shadow: 2px 2px 0 #000; flex-wrap: wrap; justify-content: center; font-size: 18px; }
+  .box { background: rgba(0,0,0,0.7); padding: 5px 12px; border-radius: 8px; border: 2px solid #0f3460; display: flex; align-items: center; }
+  .pbg { width: 80px; height: 16px; background: #333; border: 2px solid #000; border-radius: 10px; margin-left: 8px; overflow: hidden; position: relative; }
+  .pfill { height: 100%; width: 0%; transition: 0.1s; }
+  .ptext { position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; font-size: 10px; color: white; text-shadow: 1px 1px 1px #000; }
   
-  #hud {
-    color: #fff; font-size: 20px; font-weight: bold; margin-bottom: 5px;
-    text-shadow: 2px 2px 0 #000;
-    display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: center;
-  }
-  .hud-item { background: rgba(0,0,0,0.7); padding: 5px 10px; border-radius: 8px; border: 2px solid #0f3460; display: flex; align-items: center; }
+  #container { position: relative; border: 6px solid #0f3460; border-radius: 12px; background: #7ec850; overflow: hidden; display: flex; justify-content: center; }
+  canvas { display: block; image-rendering: pixelated; width: 95vw; max-width: 1100px; max-height: 80vh; height: auto; }
   
-  /* Barra de Poder */
-  .power-bar-bg {
-    width: 80px; height: 16px; background: #333; border: 2px solid #000;
-    border-radius: 10px; margin-left: 5px; overflow: hidden; position: relative;
-  }
-  .power-bar-fill {
-    height: 100%; width: 0%; transition: width 0.1s linear, background-color 0.3s;
-  }
-  .power-text {
-    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-    display: flex; justify-content: center; align-items: center;
-    font-size: 10px; color: white; text-shadow: 1px 1px 1px #000;
-  }
-
-  /* Área do Jogo Maior */
-  #game-container {
-    position: relative; border: 6px solid #0f3460; border-radius: 12px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5); background: #7ec850; overflow: hidden;
-    display: flex; justify-content: center; align-items: center;
-  }
-  #game { 
-    display: block; image-rendering: pixelated; 
-    width: 95vw; 
-    max-width: 1100px; 
-    height: auto;
-    max-height: 80vh; 
-  }
-  
-  #damage-overlay {
-    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(255, 0, 0, 0.5); display: none; pointer-events: none; z-index: 5;
-  }
-  #win, #gameover {
-    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-    background: rgba(0,0,0,0.95); color: #ffd700; padding: 20px 30px;
-    border-radius: 16px; font-size: 22px; text-align: center; display: none;
-    border: 4px solid #ffd700; z-index: 10; box-shadow: 0 0 20px #ffd700; white-space: nowrap;
-  }
-  #gameover { color: #ff5555; border-color: #ff5555; box-shadow: 0 0 20px #ff5555; }
-  #win button, #gameover button {
-    margin-top: 15px; font-size: 16px; padding: 10px 20px; border-radius: 8px;
-    border: none; background: #ffd700; cursor: pointer; font-weight: bold;
-  }
-  #gameover button { background: #ff5555; color: white; }
-  .instrucoes { color: #aaa; font-size: 14px; margin-top: 5px; text-align: center; }
+  #dmg { position: absolute; inset: 0; background: rgba(255,0,0,0.5); display: none; z-index: 5; pointer-events: none; }
+  #end { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); background: rgba(0,0,0,0.95); padding: 20px 40px; border-radius: 15px; text-align: center; border: 4px solid #ffd700; display: none; z-index: 10; white-space: nowrap; }
+  #end button { margin-top: 15px; padding: 10px 20px; font-weight: bold; cursor: pointer; border-radius: 8px; border: none; background: #ffd700; }
+  .inst { margin-top: 8px; font-size: 14px; color: #aaa; }
 </style>
 </head>
 <body>
 
-<div id="loading-screen">
-  <div class="spinner"></div>
-  <h2>Carregando Pokémons...</h2>
-</div>
+<div id="loading"><div class="spin"></div><h2>Carregando...</h2></div>
 
 <div id="menu">
-  <h1>Quem vai explorar hoje?</h1>
-  <div class="characters">
-    <button class="char-btn" onclick="startGame('pikachu')">
-      <img src="https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/25.png" alt="Pikachu"> Pikachu
-    </button>
-    <button class="char-btn" onclick="startGame('charmander')">
-      <img src="https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/4.png" alt="Charmander"> Charmander
-    </button>
-    <button class="char-btn" onclick="startGame('bulbasaur')">
-      <img src="https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/1.png" alt="Bulbasaur"> Bulbasaur
-    </button>
-    <button class="char-btn" onclick="startGame('squirtle')">
-      <img src="https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/7.png" alt="Squirtle"> Squirtle
-    </button>
+  <h1>Escolha seu Pokémon</h1>
+  <div class="chars">
+    <div class="btn" onclick="start('pikachu')"><img src="https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/25.png">Pikachu</div>
+    <div class="btn" onclick="start('charmander')"><img src="https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/4.png">Charmander</div>
+    <div class="btn" onclick="start('bulbasaur')"><img src="https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/1.png">Bulbasaur</div>
+    <div class="btn" onclick="start('squirtle')"><img src="https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/7.png">Squirtle</div>
   </div>
 </div>
 
-<div id="game-area">
+<div id="game">
   <div id="hud">
-    <div class="hud-item" style="color:#00ffcc">Fase: <span id="level">1</span></div>
-    <div class="hud-item" style="color:#ff5555">Pokébolas: <span id="score">0</span> / <span id="total">0</span></div>
-    <div class="hud-item" style="color:#ffd700">Evolução: <span id="evo-count">0</span>/5</div>
-    <div class="hud-item" style="color:#ff5555">Vidas: <span id="lives">❤️❤️❤️</span></div>
-    <div class="hud-item" style="color:#ffd700">
-      <span id="power-label">Poder:</span> 
-      <div class="power-bar-bg">
-        <div class="power-bar-fill" id="power-fill"></div>
-        <div class="power-text" id="power-text">0%</div>
-      </div>
-    </div>
+    <div class="box" style="color:#00ffcc">Fase: <span id="lvl">1</span></div>
+    <div class="box" style="color:#ff5555">Pokébolas: <span id="sc">0</span>/<span id="tot">0</span></div>
+    <div class="box" style="color:#ffd700">Evolução: <span id="evo">0</span>/5</div>
+    <div class="box" style="color:#ff5555">Vidas: <span id="lives">❤️❤️❤️</span></div>
+    <div class="box" style="color:#ffd700">Poder: <div class="pbg"><div class="pfill" id="pfill"></div><div class="ptext" id="ptext">0%</div></div></div>
   </div>
-  <div id="game-container">
-    <canvas id="game"></canvas>
-    <div id="damage-overlay"></div>
-    <div id="win">🎉 Fase Concluída! 🎉<br><button onclick="nextLevel()">Próxima Fase</button></div>
-    <div id="gameover">💀 Capturado! 💀<br><button onclick="restartLevel()">Tentar de Novo</button></div>
+  <div id="container">
+    <canvas id="cv"></canvas>
+    <div id="dmg"></div>
+    <div id="end"><span id="endTxt"></span><br><button onclick="reset()">Continuar</button></div>
   </div>
-  <div class="instrucoes">Use as setas. Aperte <b>ESPAÇO</b> para atacar e pegue 5 <b>BOLAS DOURADAS</b> para evoluir!</div>
+  <div class="inst">Setas para andar | ESPAÇO para atacar | Pegue 5 bolas douradas para evoluir</div>
 </div>
 
 <script>
-const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d');
-const TILE = 50;
-const MAP_W = 17; 
-const MAP_H = 13; 
-canvas.width  = MAP_W * TILE;
-canvas.height = MAP_H * TILE;
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+const T = 50, MW = 17, MH = 13;
+cv.width = MW * T; cv.height = MH * T;
 
-const sprites = {
-  pikachu: new Image(), raichu: new Image(),
-  charmander: new Image(), charmeleon: new Image(),
-  bulbasaur: new Image(), ivysaur: new Image(),
-  squirtle: new Image(), wartortle: new Image(),
+const img = {
+  pikachu: new Image(), raichu: new Image(), charmander: new Image(), charmeleon: new Image(),
+  bulbasaur: new Image(), ivysaur: new Image(), squirtle: new Image(), wartortle: new Image(),
   zubat: new Image(), koffing: new Image(), jessie: new Image(), james: new Image(),
-  pokeball: new Image(), goldball: new Image()
+  ball: new Image(), gold: new Image()
 };
+img.pikachu.src="https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/25.png";
+img.raichu.src="https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/26.png";
+img.charmander.src="https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/4.png";
+img.charmeleon.src="https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/5.png";
+img.bulbasaur.src="https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/1.png";
+img.ivysaur.src="https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/2.png";
+img.squirtle.src="https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/7.png";
+img.wartortle.src="https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/8.png";
+img.zubat.src="https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/41.png";
+img.koffing.src="https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/109.png";
+img.jessie.src="https://play.pokemonshowdown.com/sprites/trainers/jessie.png";
+img.james.src="https://play.pokemonshowdown.com/sprites/trainers/james.png";
+img.ball.src="https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/items/poke-ball.png";
+img.gold.src="https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/items/master-ball.png";
 
-sprites.pikachu.src = "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/25.png";
-sprites.raichu.src = "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/26.png";
-sprites.charmander.src = "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/4.png";
-sprites.charmeleon.src = "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/5.png";
-sprites.bulbasaur.src = "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/1.png";
-sprites.ivysaur.src = "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/2.png";
-sprites.squirtle.src = "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/7.png";
-sprites.wartortle.src = "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/8.png";
-sprites.zubat.src = "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/41.png";
-sprites.koffing.src = "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/109.png";
-sprites.jessie.src = "https://play.pokemonshowdown.com/sprites/trainers/jessie.png";
-sprites.james.src = "https://play.pokemonshowdown.com/sprites/trainers/james.png";
-sprites.pokeball.src = "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/items/poke-ball.png";
-sprites.goldball.src = "https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/items/master-ball.png";
+let loaded = 0;
+for (let k in img) { img[k].onload = () => { loaded++; if(loaded >= 14 && !started) { document.getElementById('loading').style.display='none'; document.getElementById('menu').style.display='block'; } }; }
 
-let loadedImages = 0;
-let gameStarted = false;
-const totalImages = Object.keys(sprites).length;
-
-for (let key in sprites) {
-  sprites[key].onload = checkLoad;
-  sprites[key].onerror = checkLoad;
-}
-
-function checkLoad() {
-  loadedImages++;
-  if (loadedImages >= totalImages && !gameStarted) {
-    document.getElementById('loading-screen').style.display = 'none';
-    document.getElementById('menu').style.display = 'block';
-  }
-}
-
-let currentCharacter = 'pikachu';
-let isEvolved = false;
-let evoCount = 0;
-let currentLevel = 1;
-let MAP = [], items = [], evoBalls = [], enemies = [], rockets = [];
-let player = { x: 0, y: 0, r: 18, speed: 3.5, dir: 'down', animTimer: 0, invulnerable: false };
+let started = false, char = 'pikachu', evo = false, evoCnt = 0, lvl = 1, lives = 3, score = 0, tot = 0;
+let map = [], items = [], evoBalls = [], enemies = [], rockets = [], particles = [];
+let p = { x: 0, y: 0, r: 18, spd: 3.5, timer: 0, inv: false };
 let target = { x: 0, y: 0, r: 20, active: false };
-let keys = {};
-let score = 0, totalItems = 0, lives = 3;
-let winShown = false, gameLoopId = null;
+let keys = {}, power = 0, wave = 0, cool = 0, evoTimer = 300, win = false;
 
-let power = 0;
-const MAX_POWER = 100;
-let powerWave = 0; 
-let powerCooldown = 0;
-let attackParticles = []; 
-let evoSpawnTimer = 300;
+window.onkeydown = e => { keys[e.code] = true; if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault(); };
+window.onkeyup = e => { keys[e.code] = false; };
 
-function startGame(character) {
-  gameStarted = true; 
-  currentCharacter = character;
-  isEvolved = false;
-  evoCount = 0;
-  currentLevel = 1;
-  document.getElementById('level').innerText = currentLevel;
-  document.getElementById('evo-count').innerText = evoCount;
-  
-  const labels = { pikachu: 'Elétrico', charmander: 'Fogo', bulbasaur: 'Planta', squirtle: 'Água' };
-  document.getElementById('power-label').innerText = `Poder (${labels[currentCharacter]}):`;
-
-  document.getElementById('menu').style.display = 'none';
-  document.getElementById('game-area').style.display = 'flex';
-  startLevel();
-  if (!gameLoopId) loop();
+function start(c) {
+  started = true; char = c; lvl = 1; evo = false; evoCnt = 0;
+  document.getElementById('lvl').innerText = lvl; document.getElementById('evo').innerText = evoCnt;
+  document.getElementById('menu').style.display = 'none'; document.getElementById('game').style.display = 'flex';
+  initLevel();
+  if(!window.reqId) loop();
 }
 
-function nextLevel() {
-  currentLevel++;
-  document.getElementById('level').innerText = currentLevel;
-  startLevel();
-}
+function reset() { if(lives <= 0) { lvl = 1; evo = false; evoCnt = 0; document.getElementById('lvl').innerText = lvl; document.getElementById('evo').innerText = evoCnt; } initLevel(); }
+function nextLvl() { lvl++; document.getElementById('lvl').innerText = lvl; initLevel(); }
 
-function restartLevel() { startLevel(); }
-
-function startLevel() {
-  lives = 3;
-  power = 0;
-  powerWave = 0;
-  powerCooldown = 0;
-  attackParticles = [];
-  evoBalls = [];
-  evoSpawnTimer = 300; 
-  updateLivesUI();
-  updatePowerUI();
-  generateMaze();
-}
-
-function updateLivesUI() {
-  let heartStr = "";
-  for (let i = 0; i < lives; i++) heartStr += "❤️";
-  for (let i = lives; i < 3; i++) heartStr += "🖤";
-  document.getElementById('lives').innerText = heartStr;
-}
-
-function updatePowerUI() {
-  const fill = document.getElementById('power-fill');
-  const text = document.getElementById('power-text');
-  fill.style.width = power + '%';
-  text.innerText = Math.floor(power) + '%';
-  
-  const colors = { 
-    pikachu: 'linear-gradient(90deg, #ffd700, #ffff00)', 
-    charmander: 'linear-gradient(90deg, #ff4500, #ff8c00)', 
-    bulbasaur: 'linear-gradient(90deg, #32cd32, #98fb98)', 
-    squirtle: 'linear-gradient(90deg, #00bfff, #87ceeb)' 
-  };
-  fill.style.background = colors[currentCharacter];
-}
-
-function generateMaze() {
-  MAP = Array.from({ length: MAP_H }, () => Array(MAP_W).fill(1));
-  const stack = [{ x: 1, y: 1 }];
-  MAP[1][1] = 0;
-  const dirs = [{ dx: 0, dy: -2 }, { dx: 0, dy: 2 }, { dx: -2, dy: 0 }, { dx: 2, dy: 0 }];
-
-  while (stack.length > 0) {
-    const current = stack[stack.length - 1];
-    const neighbors = [];
-    for (let d of dirs) {
-      const nx = current.x + d.dx;
-      const ny = current.y + d.dy;
-      if (nx > 0 && nx < MAP_W - 1 && ny > 0 && ny < MAP_H - 1 && MAP[ny][nx] === 1) {
-        neighbors.push({ x: nx, y: ny, px: current.x + d.dx / 2, py: current.y + d.dy / 2 });
-      }
+function initLevel() {
+  lives = 3; power = 0; wave = 0; cool = 0; particles = []; evoBalls = []; evoTimer = 300;
+  updateLives(); updatePower();
+  map = Array.from({length: MH}, () => Array(MW).fill(1));
+  let stack = [{x:1, y:1}]; map[1][1] = 0;
+  let dirs = [{x:0,y:-2},{x:0,y:2},{x:-2,y:0},{x:2,y:0}];
+  while(stack.length) {
+    let cur = stack[stack.length-1], nb = [];
+    for(let d of dirs) {
+      let nx = cur.x+d.x, ny = cur.y+d.y;
+      if(nx>0 && nx<MW-1 && ny>0 && ny<MH-1 && map[ny][nx]===1) nb.push({x:nx, y:ny, px:cur.x+d.x/2, py:cur.y+d.y/2});
     }
-    if (neighbors.length > 0) {
-      const next = neighbors[Math.floor(Math.random() * neighbors.length)];
-      MAP[next.py][next.px] = 0;
-      MAP[next.y][next.x] = 0;
-      stack.push({ x: next.x, y: next.y });
-    } else {
-      stack.pop();
+    if(nb.length) { let n = nb[Math.floor(Math.random()*nb.length)]; map[n.py][n.px]=0; map[n.y][n.x]=0; stack.push({x:n.x, y:n.y}); } else stack.pop();
+  }
+  for(let r=1; r<MH-1; r++) for(let c=1; c<MW-1; c++) {
+    if(map[r][c]===0) {
+      let w=0, v=[];
+      if(map[r-1][c]===1){w++;v.push({dr:-1,dc:0})} if(map[r+1][c]===1){w++;v.push({dr:1,dc:0})}
+      if(map[r][c-1]===1){w++;v.push({dr:0,dc:-1})} if(map[r][c+1]===1){w++;v.push({dr:0,dc:1})}
+      if(w>=3) { let b = v.filter(d=>r+d.dr>0 && r+d.dr<MH-1 && c+d.dc>0 && c+d.dc<MW-1); if(b.length) { let d=b[Math.floor(Math.random()*b.length)]; map[r+d.dr][c+d.dc]=0; } }
     }
   }
-
-  for (let r = 1; r < MAP_H - 1; r++) {
-    for (let c = 1; c < MAP_W - 1; c++) {
-      if (MAP[r][c] === 0) {
-        let walls = 0;
-        let validDirs = [];
-        if (MAP[r-1][c] === 1) { walls++; validDirs.push({dr: -1, dc: 0}); }
-        if (MAP[r+1][c] === 1) { walls++; validDirs.push({dr: 1, dc: 0}); }
-        if (MAP[r][c-1] === 1) { walls++; validDirs.push({dr: 0, dc: -1}); }
-        if (MAP[r][c+1] === 1) { walls++; validDirs.push({dr: 0, dc: 1}); }
-
-        if (walls >= 3) {
-          const breakableDirs = validDirs.filter(d => {
-            const nr = r + d.dr;
-            const nc = c + d.dc;
-            return nr > 0 && nr < MAP_H - 1 && nc > 0 && nc < MAP_W - 1;
-          });
-          if (breakableDirs.length > 0) {
-            const d = breakableDirs[Math.floor(Math.random() * breakableDirs.length)];
-            MAP[r + d.dr][c + d.dc] = 0;
-          }
-        }
-      }
-    }
-  }
-
-  player.x = 1 * TILE + TILE / 2;
-  player.y = 1 * TILE + TILE / 2;
-  player.invulnerable = false;
-  target.x = (MAP_W - 2) * TILE + TILE / 2;
-  target.y = (MAP_H - 2) * TILE + TILE / 2;
-  target.active = false;
-
-  const emptyCells = [];
-  for (let r = 1; r < MAP_H - 1; r++) {
-    for (let c = 1; c < MAP_W - 1; c++) {
-      if (MAP[r][c] === 0 && !(r === 1 && c === 1) && !(r === MAP_H - 2 && c === MAP_W - 2)) {
-        emptyCells.push({ c, r });
-      }
-    }
-  }
-  emptyCells.sort(() => Math.random() - 0.5);
-
+  p.x = 1*T+T/2; p.y = 1*T+T/2; p.inv = false;
+  target.x = (MW-2)*T+T/2; target.y = (MH-2)*T+T/2; target.active = false;
+  let cells = [];
+  for(let r=1; r<MH-1; r++) for(let c=1; c<MW-1; c++) if(map[r][c]===0 && !(r===1&&c===1) && !(r===MH-2&&c===MW-2)) cells.push({c,r});
+  cells.sort(() => Math.random()-0.5);
   items = [];
-  const numItems = Math.min(3 + (currentLevel - 1), Math.floor(emptyCells.length / 2));
-  for (let i = 0; i < numItems; i++) {
-    items.push({ x: emptyCells[i].c * TILE + TILE / 2, y: emptyCells[i].r * TILE + TILE / 2, r: 18, collected: false });
+  tot = Math.min(3+(lvl-1), Math.floor(cells.length/2));
+  for(let i=0; i<tot; i++) items.push({x:cells[i].c*T+T/2, y:cells[i].r*T+T/2, r:18, got:false});
+  enemies = []; rockets = [];
+  let ne = Math.min(1+Math.floor(lvl/2), 3);
+  for(let i=0; i<ne; i++) {
+    let c = cells[cells.length-1-i]; if(!c) continue;
+    let d = [{dx:1,dy:0},{dx:-1,dy:0},{dx:0,dy:1},{dx:0,dy:-1}].sort(()=>Math.random()-0.5)[0];
+    enemies.push({x:c.c*T+T/2, y:c.r*T+T/2, r:18, gc:c.c, gr:c.r, type:i%2===0?'zubat':'koffing', tm:Math.random()*10, dx:d.dx, dy:d.dy, spd:2.0+lvl*0.2});
   }
-  
-  enemies = [];
-  const numEnemies = Math.min(1 + Math.floor(currentLevel / 2), 3);
-  for (let i = 0; i < numEnemies; i++) {
-    const cell = emptyCells[emptyCells.length - 1 - i];
-    if (cell) {
-      const dirs = [{dx:1,dy:0},{dx:-1,dy:0},{dx:0,dy:1},{dx:0,dy:-1}].sort(() => Math.random() - 0.5);
-      enemies.push({
-        x: cell.c * TILE + TILE / 2, y: cell.r * TILE + TILE / 2, r: 18,
-        gridC: cell.c, gridR: cell.r, type: i % 2 === 0 ? 'zubat' : 'koffing',
-        animTimer: Math.random() * 10, dirX: dirs[0].dx, dirY: dirs[0].dy,
-        speed: 2.0 + (currentLevel * 0.2)
-      });
-    }
+  let nr = Math.min(Math.floor(lvl/2), 2);
+  for(let i=0; i<nr; i++) {
+    let c = cells.filter(x=>x.r>2&&x.c>2)[i]; if(!c) continue;
+    let d = [{dx:1,dy:0},{dx:-1,dy:0},{dx:0,dy:1},{dx:0,dy:-1}].sort(()=>Math.random()-0.5)[0];
+    rockets.push({x:c.c*T+T/2, y:c.r*T+T/2, r:18, gc:c.c, gr:c.r, type:i%2===0?'jessie':'james', tm:Math.random()*10, dx:d.dx, dy:d.dy, spd:1.8});
   }
-
-  rockets = [];
-  const numRockets = Math.min(Math.floor(currentLevel / 2), 2);
-  const rocketCells = emptyCells.filter(c => c.r > 2 && c.c > 2).sort(() => Math.random() - 0.5);
-  for (let i = 0; i < numRockets; i++) {
-    const cell = rocketCells[i];
-    if (cell) {
-      const dirs = [{dx:1,dy:0},{dx:-1,dy:0},{dx:0,dy:1},{dx:0,dy:-1}].sort(() => Math.random() - 0.5);
-      rockets.push({
-        x: cell.c * TILE + TILE / 2, y: cell.r * TILE + TILE / 2, r: 18,
-        gridC: cell.c, gridR: cell.r, type: i % 2 === 0 ? 'jessie' : 'james',
-        animTimer: Math.random() * 10, dirX: dirs[0].dx, dirY: dirs[0].dy,
-        speed: 1.8
-      });
-    }
-  }
-  
-  totalItems = numItems;
-  score = 0;
-  winShown = false;
-  document.getElementById('score').innerText = score;
-  document.getElementById('total').innerText = totalItems;
-  document.getElementById('win').style.display = 'none';
-  document.getElementById('gameover').style.display = 'none';
+  score = 0; win = false;
+  document.getElementById('sc').innerText = score; document.getElementById('tot').innerText = tot;
+  document.getElementById('end').style.display = 'none';
+  document.getElementById('dmg').style.display = 'none';
 }
 
-window.addEventListener('keydown', e => {
-  const k = e.code || e.key;
-  keys[k] = true;
-  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(k)) e.preventDefault();
-});
-window.addEventListener('keyup', e => {
-  keys[e.code || e.key] = false;
-});
+function updateLives() { document.getElementById('lives').innerText = "❤️".repeat(lives) + "🖤".repeat(3-lives); }
+function updatePower() { document.getElementById('pfill').style.width = power+'%'; document.getElementById('ptext').innerText = Math.floor(power)+'%'; }
 
-function collidesWithWall(cx, cy, r) {
-  const minCol = Math.floor((cx - r) / TILE), maxCol = Math.floor((cx + r) / TILE);
-  const minRow = Math.floor((cy - r) / TILE), maxRow = Math.floor((cy + r) / TILE);
-  for (let row = minRow; row <= maxRow; row++) {
-    for (let col = minCol; col <= maxCol; col++) {
-      if (row < 0 || row >= MAP_H || col < 0 || col >= MAP_W) return true;
-      if (MAP[row][col] === 1) {
-        const nx = Math.max(col * TILE, Math.min(cx, col * TILE + TILE));
-        const ny = Math.max(row * TILE, Math.min(cy, row * TILE + TILE));
-        if ((cx - nx)**2 + (cy - ny)**2 < r**2) return true;
-      }
+function wall(cx, cy, r) {
+  let c1=Math.floor((cx-r)/T), c2=Math.floor((cx+r)/T), r1=Math.floor((cy-r)/T), r2=Math.floor((cy+r)/T);
+  for(let row=r1; row<=r2; row++) for(let col=c1; col<=c2; col++) {
+    if(row<0||row>=MH||col<0||col>=MW||map[row][col]===1) {
+      let nx = Math.max(col*T, Math.min(cx, col*T+T)), ny = Math.max(row*T, Math.min(cy, row*T+T));
+      if((cx-nx)**2 + (cy-ny)**2 < r**2) return true;
     }
   }
   return false;
 }
-
-function isCellFree(c, r) { return c >= 0 && c < MAP_W && r >= 0 && r < MAP_H && MAP[r][c] === 0; }
-
-function hasLineOfSight(c1, r1, c2, r2) {
-  if (c1 !== c2 && r1 !== r2) return false;
-  if (c1 === c2) {
-    for (let r = Math.min(r1, r2) + 1; r < Math.max(r1, r2); r++) if (MAP[r][c1] === 1) return false;
-  } else {
-    for (let c = Math.min(c1, c2) + 1; c < Math.max(c1, c2); c++) if (MAP[r1][c] === 1) return false;
-  }
+function free(c, r) { return c>=0 && c<MW && r>=0 && r<MH && map[r][c]===0; }
+function sight(c1, r1, c2, r2) {
+  if(c1!==c2 && r1!==r2) return false;
+  if(c1===c2) { for(let r=Math.min(r1,r2)+1; r<Math.max(r1,r2); r++) if(map[r][c1]===1) return false; }
+  else { for(let c=Math.min(c1,c2)+1; c<Math.max(c1,c2); c++) if(map[r1][c]===1) return false; }
   return true;
 }
-
-function takeDamage() {
-  player.invulnerable = true;
-  lives--;
-  updateLivesUI();
-  document.getElementById('damage-overlay').style.display = 'block';
-  setTimeout(() => document.getElementById('damage-overlay').style.display = 'none', 200);
-  player.x = 1 * TILE + TILE / 2;
-  player.y = 1 * TILE + TILE / 2;
-  if (lives <= 0) {
-    winShown = true; 
-    document.getElementById('gameover').style.display = 'block';
-  } else {
-    setTimeout(() => { player.invulnerable = false; }, 1500);
-  }
+function hit() {
+  p.inv = true; lives--; updateLives(); document.getElementById('dmg').style.display='block';
+  setTimeout(()=>document.getElementById('dmg').style.display='none', 200);
+  p.x = 1*T+T/2; p.y = 1*T+T/2;
+  if(lives<=0) { win=true; document.getElementById('endTxt').innerText="💀 Capturado!"; document.getElementById('end').style.display='block'; }
+  else setTimeout(()=>p.inv=false, 1500);
 }
-
-function updateEnemyGrid(entity, speed, chasePlayer = false) {
-  const centerX = entity.gridC * TILE + TILE / 2;
-  const centerY = entity.gridR * TILE + TILE / 2;
-  
-  const dx = centerX - entity.x;
-  const dy = centerY - entity.y;
-  const dist = Math.hypot(dx, dy);
-
-  if (dist > 0) {
-    const moveX = (dx / dist) * Math.min(speed, dist);
-    const moveY = (dy / dist) * Math.min(speed, dist);
-    entity.x += moveX;
-    entity.y += moveY;
-  }
-
-  if (Math.abs(entity.x - centerX) < 1 && Math.abs(entity.y - centerY) < 1) {
-    entity.x = centerX;
-    entity.y = centerY;
-
-    let canContinue = isCellFree(entity.gridC + entity.dirX, entity.gridR + entity.dirY);
-
-    if (chasePlayer) {
-      const pc = Math.floor(player.x / TILE), pr = Math.floor(player.y / TILE);
-      const distToPlayer = Math.abs(pc - entity.gridC) + Math.abs(pr - entity.gridR);
-      
-      if (distToPlayer <= 3 && hasLineOfSight(entity.gridC, entity.gridR, pc, pr)) {
-        const possibleDirs = [{dx: 1, dy: 0}, {dx: -1, dy: 0}, {dx: 0, dy: 1}, {dx: 0, dy: -1}].filter(d => isCellFree(entity.gridC + d.dx, entity.gridR + d.dy));
-        if (possibleDirs.length > 0) {
-          let bestDir = possibleDirs[0], bestDist = Infinity;
-          for (let d of possibleDirs) {
-            const dist = Math.abs(pc - (entity.gridC + d.dx)) + Math.abs(pr - (entity.gridR + d.dy));
-            if (dist < bestDist) { bestDist = dist; bestDir = d; }
-          }
-          entity.dirX = bestDir.dx; entity.dirY = bestDir.dy;
-          canContinue = true;
-        }
+function moveAI(e, spd, chase) {
+  let cx = e.gc*T+T/2, cy = e.gr*T+T/2, dx = cx-e.x, dy = cy-e.y, d = Math.hypot(dx,dy);
+  if(d>0) { e.x += (dx/d)*Math.min(spd,d); e.y += (dy/d)*Math.min(spd,d); }
+  if(Math.abs(e.x-cx)<1 && Math.abs(e.y-cy)<1) {
+    e.x=cx; e.y=cy; let can = free(e.gc+e.dx, e.gr+e.dy);
+    if(chase) {
+      let pc=Math.floor(p.x/T), pr=Math.floor(p.y/T), d2=Math.abs(pc-e.gc)+Math.abs(pr-e.gr);
+      if(d2<=3 && sight(e.gc,e.gr,pc,pr)) {
+        let pos = [{dx:1,dy:0},{dx:-1,dy:0},{dx:0,dy:1},{dx:0,dy:-1}].filter(x=>free(e.gc+x.dx, e.gr+x.dy));
+        if(pos.length) { let best=pos[0], bd=Infinity; for(let x of pos) { let dst=Math.abs(pc-(e.gc+x.dx))+Math.abs(pr-(e.gr+x.dy)); if(dst<bd){bd=dst;best=x;} } e.dx=best.dx; e.dy=best.dy; can=true; }
       }
     }
-
-    if (!canContinue) {
-      const possibleDirs = [{dx: 1, dy: 0}, {dx: -1, dy: 0}, {dx: 0, dy: 1}, {dx: 0, dy: -1}].filter(d => isCellFree(entity.gridC + d.dx, entity.gridR + d.dy));
-      if (possibleDirs.length > 0) {
-        const chosen = possibleDirs[Math.floor(Math.random() * possibleDirs.length)];
-        entity.dirX = chosen.dx; entity.dirY = chosen.dy;
-        canContinue = true;
-      }
-    }
-    
-    if (canContinue) {
-      entity.gridC += entity.dirX;
-      entity.gridR += entity.dirY;
-    }
+    if(!can) { let pos = [{dx:1,dy:0},{dx:-1,dy:0},{dx:0,dy:1},{dx:0,dy:-1}].filter(x=>free(e.gc+x.dx, e.gr+x.dy)); if(pos.length){ let x=pos[Math.floor(Math.random()*pos.length)]; e.dx=x.dx; e.dy=x.dy; can=true; } }
+    if(can) { e.gc+=e.dx; e.gr+=e.dy; }
   }
 }
 
 function update() {
-  if (winShown) return;
-
-  let dx = 0, dy = 0;
-  if (keys['ArrowUp'])    dy -= 1;
-  if (keys['ArrowDown'])  dy += 1;
-  if (keys['ArrowLeft'])  dx -= 1;
-  if (keys['ArrowRight']) dx += 1;
-
-  if (dx !== 0 || dy !== 0) {
-    const len = Math.hypot(dx, dy);
-    dx = (dx / len) * player.speed;
-    dy = (dy / len) * player.speed;
-    if (Math.abs(dx) > Math.abs(dy)) player.dir = dx > 0 ? 'right' : 'left';
-    else player.dir = dy > 0 ? 'down' : 'up';
-    
-    const oldX = player.x;
-    const oldY = player.y;
-
-    if (!collidesWithWall(player.x + dx, player.y, player.r)) player.x += dx;
-    if (!collidesWithWall(player.x, player.y + dy, player.r)) player.y += dy;
-    
-    // BUG FIX: Só carrega se moveu de verdade
-    if (player.x !== oldX || player.y !== oldY) {
-      player.animTimer += 0.3;
-      if (power < MAX_POWER) {
-        power = Math.min(MAX_POWER, power + 0.8);
-        updatePowerUI();
-      }
-    }
-  } else {
-    player.animTimer += 0.1;
-  }
-
-  if (powerCooldown > 0) powerCooldown--;
+  if(win) return;
   
-  if (keys['Space'] && power >= MAX_POWER && powerCooldown <= 0) {
-    power = 0;
-    powerCooldown = 60;
-    powerWave = 10;
-    updatePowerUI();
-
-    let c1, c2;
-    if (currentCharacter === 'pikachu') { c1 = '#ffff00'; c2 = '#ffffff'; }
-    else if (currentCharacter === 'charmander') { c1 = '#ff4500'; c2 = '#ffcc00'; }
-    else if (currentCharacter === 'squirtle') { c1 = '#00bfff'; c2 = '#e0ffff'; }
-    else { c1 = '#32cd32'; c2 = '#98fb98'; }
-
-    for (let i = 0; i < 30; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = Math.random() * 6 + 2;
-      attackParticles.push({
-        x: player.x, y: player.y,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
-        life: 1.0,
-        color: Math.random() > 0.5 ? c1 : c2,
-        size: Math.random() * 6 + 4
-      });
+  // JOGADOR E CARREGAMENTO
+  let dx=0, dy=0;
+  if(keys['ArrowUp']) dy--; if(keys['ArrowDown']) dy++; if(keys['ArrowLeft']) dx--; if(keys['ArrowRight']) dx++;
+  if(dx||dy) {
+    let l=Math.hypot(dx,dy); dx=(dx/l)*p.spd; dy=(dy/l)*p.spd;
+    let ox=p.x, oy=p.y; // Posição antiga
+    if(!wall(p.x+dx, p.y, p.r)) p.x+=dx;
+    if(!wall(p.x, p.y+dy, p.r)) p.y+=dy;
+    
+    // SÓ CARREGA SE MOVEU
+    if(p.x!==ox || p.y!==oy) {
+      p.timer+=0.3;
+      if(power<100) { power=Math.min(100, power+0.8); updatePower(); }
     }
+  } else p.timer+=0.1;
 
-    const blastRadius = TILE * 2.5;
-    enemies = enemies.filter(e => Math.hypot(player.x - e.x, player.y - e.y) > blastRadius);
-    rockets = rockets.filter(r => Math.hypot(player.x - r.x, player.y - r.y) > blastRadius);
+  // PODER
+  if(cool>0) cool--;
+  if(keys['Space'] && power>=100 && cool<=0) {
+    power=0; cool=60; wave=10; updatePower();
+    let c1 = char==='pikachu'?'#ff0':char==='charmander'?'#f40':char==='squirtle'?'#0bf':'#3c3';
+    let c2 = char==='pikachu'?'#fff':char==='charmander'?'#fc0':char==='squirtle'?'#eff':'#9f9';
+    for(let i=0; i<30; i++) {
+      let a=Math.random()*Math.PI*2, s=Math.random()*6+2;
+      particles.push({x:p.x, y:p.y, vx:Math.cos(a)*s, vy:Math.sin(a)*s, life:1, col:Math.random()>0.5?c1:c2, sz:Math.random()*6+4});
+    }
+    let br=T*2.5;
+    enemies = enemies.filter(e=>Math.hypot(p.x-e.x, p.y-e.y)>br);
+    rockets = rockets.filter(e=>Math.hypot(p.x-e.x, p.y-e.y)>br);
+  }
+  if(wave>0) { wave+=15; if(wave>T*3) wave=0; }
+  for(let i=particles.length-1; i>=0; i--) {
+    let pt=particles[i]; pt.x+=pt.vx; pt.y+=pt.vy; pt.vx*=0.95; pt.vy*=0.95; pt.life-=0.04;
+    if(pt.life<=0) particles.splice(i,1);
   }
 
-  if (powerWave > 0) {
-    powerWave += 15;
-    if (powerWave > TILE * 3) powerWave = 0;
+  // BOLAS DOURADAS
+  if(!evo && evoBalls.length===0 && evoCnt<5) {
+    evoTimer--;
+    if(evoTimer<=0) {
+      let c = Math.floor(Math.random()*(MW-2))+1, r = Math.floor(Math.random()*(MH-2))+1;
+      if(map[r][c]===0) evoBalls.push({x:c*T+T/2, y:r*T+T/2, r:18});
+    }
   }
-
-  for (let i = attackParticles.length - 1; i >= 0; i--) {
-    let p = attackParticles[i];
-    p.x += p.vx;
-    p.y += p.vy;
-    p.vx *= 0.95; 
-    p.vy *= 0.95;
-    p.life -= 0.04;
-    if (p.life <= 0) attackParticles.splice(i, 1);
-  }
-
-  // Spawn de Bolas Douradas
-  if (!isEvolved && evoBalls.length === 0 && evoCount < 5) {
-    evoSpawnTimer--;
-    if (evoSpawnTimer <= 0) {
-      let attempts = 0;
-      while (attempts < 100) {
-        const rc = Math.floor(Math.random() * (MAP_W - 2)) + 1;
-        const rr = Math.floor(Math.random() * (MAP_H - 2)) + 1;
-        if (MAP[rr][rc] === 0) {
-          evoBalls.push({
-            x: rc * TILE + TILE / 2,
-            y: rr * TILE + TILE / 2,
-            r: 18
-          });
-          break;
-        }
-        attempts++;
-      }
+  for(let i=evoBalls.length-1; i>=0; i--) {
+    let b=evoBalls[i];
+    if(Math.hypot(p.x-b.x, p.y-b.y)<p.r+b.r) {
+      evoBalls.splice(i,1); evoCnt++; document.getElementById('evo').innerText=evoCnt; evoTimer=400;
+      if(evoCnt>=5 && !evo) { evo=true; p.spd=4.5; power=100; updatePower(); }
     }
   }
 
-  // Coleta de Bolas Douradas
-  for (let i = evoBalls.length - 1; i >= 0; i--) {
-    const ball = evoBalls[i];
-    if (Math.hypot(player.x - ball.x, player.y - ball.y) < player.r + ball.r) {
-      evoBalls.splice(i, 1);
-      evoCount++;
-      document.getElementById('evo-count').innerText = evoCount;
-      evoSpawnTimer = 400;
-
-      if (evoCount >= 5 && !isEvolved) {
-        isEvolved = true;
-        player.speed = 4.5; 
-        power = MAX_POWER;
-        updatePowerUI();
-      }
-    }
-  }
-
-  enemies.forEach(enemy => {
-    enemy.animTimer += 0.1;
-    updateEnemyGrid(enemy, enemy.speed, false);
+  // INIMIGOS E COLETA
+  enemies.forEach(e=>{ e.tm+=0.1; moveAI(e, e.spd, false); });
+  rockets.forEach(e=>{ e.tm+=0.1; moveAI(e, e.spd, true); });
+  items.forEach(i=>{
+    if(!i.got && Math.hypot(p.x-i.x, p.y-i.y)<p.r+i.r) { i.got=true; score++; document.getElementById('sc').innerText=score; if(score===tot) target.active=true; }
   });
-
-  rockets.forEach(rocket => {
-    rocket.animTimer += 0.1;
-    updateEnemyGrid(rocket, rocket.speed, true);
-  });
-
-  items.forEach(item => {
-    if (!item.collected && Math.hypot(player.x - item.x, player.y - item.y) < player.r + item.r) {
-      item.collected = true;
-      score++;
-      document.getElementById('score').innerText = score;
-      if (score === totalItems) target.active = true;
-    }
-  });
-
-  if (!player.invulnerable) {
-    let hit = false;
-    enemies.concat(rockets).forEach(e => {
-      if (Math.hypot(player.x - e.x, player.y - e.y) < player.r + e.r - 8) hit = true;
-    });
-    if (hit) takeDamage();
+  if(!p.inv) {
+    let h=false; enemies.concat(rockets).forEach(e=>{ if(Math.hypot(p.x-e.x, p.y-e.y)<p.r+e.r-8) h=true; });
+    if(h) hit();
   }
+  if(target.active && Math.hypot(p.x-target.x, p.y-target.y)<p.r+target.r) {
+    win=true; document.getElementById('endTxt').innerText="🎉 Fase Concluída!"; document.getElementById('end').style.display='block';
+  }
+}
 
-  if (target.active && Math.hypot(player.x - target.x, player.y - target.y) < player.r + target.r) {
-    winShown = true;
-    document.getElementById('win').style.display =
+function sprite(im, x, y, s, flip=false, isRocket=false) {
+  ctx.save(); ctx.translate(x,y); if(flip) ctx.scale(-1,1);
+  if(im && im.complete && im.naturalWidth>0) ctx.drawImage(im, -s/2, -s/2, s, s);
+  else {
+    if(isRocket) { ctx.fillStyle='#d32f2f'; ctx.fillRect(-s/2,-s/2,s,s); ctx.fillStyle='#fff'; ctx.font=`bold ${s*0.7}px Arial`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('R',0,2); }
+    else { ctx.beginPath(); ctx.arc(0,0,s/2,0,Math.PI*2); ctx.fillStyle='#ccc'; ctx.fill(); ctx.stroke(); }
+  }
+  ctx.restore();
+}
+
+function draw() {
+  for(let r=0; r<MH; r++) for(let c=0; c<MW; c++) {
+    ctx.fillStyle = map[r][c]===1 ? '#4a2e15' : ((r+c)%2===0?'#8fd45a':'#83c94f');
+    ctx.fillRect(c*T, r*T, T, T);
+    if(map[r][c]===1) { ctx.fillStyle='#3a200d'; ctx.fillRect(c*T+4, r*T+4, T-8, T-8); }
+  }
+  items.forEach(i=>{ if(!i.got) sprite(img.ball, i.x, i.y, 36); });
+  evoBalls.forEach(b=>{ 
+    ctx.save(); ctx.shadowColor='#ffd700'; ctx.shadowBlur=15;
+    sprite(img.gold, b.x, b.y, 46*(1+Math.sin(Date.now()/200)*0.15)); ctx.restore(); 
+  });
+  enemies.forEach(e=>{ sprite(img[e.type], e.x, e.y+Math.sin(e.tm*4)*3, 42); });
+  rockets.forEach(e=>{ sprite(img[e.type], e.x, e.y, 46, e.dx===-1, true); });
+  if(target.active) { ctx.save(); ctx.shadowColor='#ffcc00'; ctx.shadowBlur=15; sprite(img.gold, target.x, target.y, 46*(1+Math.sin(Date.now()/200)*0.15)); ctx.restore(); }
+  
+  if(wave>0) {
+    ctx.save(); let col = char==='pikachu'?'255,255,0':char==='charmander'?'255,69,0':char==='squirtle'?'0,191,255':'50,205,50';
+    ctx.beginPath(); ctx.arc(p.x, p.y, wave, 0, Math.PI*2); ctx.strokeStyle=`rgba(${col},${1-wave/(T*3)})`; ctx.lineWidth=8; ctx.stroke();
+    ctx.beginPath(); ctx.arc(p.x, p.y, wave*0.8, 0, Math.PI*2); ctx.strokeStyle=`rgba(255,255,255,${1-wave/(T*3)})`; ctx.lineWidth=4; ctx.stroke(); ctx.restore();
+  }
+  particles.forEach(pt=>{
+    ctx.globalAlpha=pt.life; ctx.fillStyle=pt.col;
+    if(char==='pikachu') ctx.fillRect(pt.x-pt.sz/2, pt.y-pt.sz/2, pt.sz, pt.sz);
+    else if(char==='charmander') { ctx.beginPath(); ctx.arc(pt.x, pt.y, pt.sz, 0, Math.PI*2); ctx.fill(); }
+    else if(char==='squirtle') { ctx.beginPath(); ctx.arc(pt.x, pt.y, pt.sz*0.7, 0, Math.PI*2); ctx.fill(); }
+    else { ctx.beginPath(); ctx.ellipse(pt.x, pt.y, pt.sz, pt.sz/2, pt.vx, 0, Math.PI*2); ctx.fill(); }
+  });
+  ctx.globalAlpha=1.0;
+  
+  if(!(p.inv && Math.floor(Date.now()/100)%2===0)) {
+    let c = char==='pikachu'?'#f0':char==='charmander'?'#f40':char==='squirtle'?'#0bf':'#3c3';
+    if(power>=100 && Math.floor(Date.now()/150)%2===0) { ctx.save(); ctx.shadowColor=c; ctx.shadowBlur=20; }
+    let sName = char;
+    if(evo) { sName = char==='pikachu'?'raichu':char==='charmander'?'charmeleon':char==='bulbasaur'?'ivysaur':'wartortle'; }
+    sprite(img[sName], p.x, p.y+Math.sin(p.timer*3)*2, 46);
+    if(power>=100) ctx.restore();
+  }
+}
+
+function loop() {
+  update(); draw();
+  window.reqId = requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>
