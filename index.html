@@ -10,7 +10,6 @@
     height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white;
   }
   
-  /* Telas de Início e Loading */
   #loading { position: fixed; inset: 0; background: #1a1a2e; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; }
   .spin { border: 8px solid #333; border-top: 8px solid #ffd700; border-radius: 50%; width: 60px; height: 60px; animation: s 1s linear infinite; margin-bottom: 20px; }
   @keyframes s { to { transform: rotate(360deg); } }
@@ -21,27 +20,22 @@
   .btn:hover { transform: scale(1.1); border-color: #ffd700; }
   .btn img { width: 64px; height: 64px; image-rendering: pixelated; margin-bottom: 5px; }
 
-  /* Área do Jogo */
   #game { display: none; flex-direction: column; align-items: center; width: 100%; }
   
-  /* HUD (Topo) */
-  #hud { display: flex; gap: 10px; margin-bottom: 10px; font-weight: bold; text-shadow: 2px 2px 0 #000; flex-wrap: wrap; justify-content: center; font-size: 20px; }
+  #hud { display: flex; gap: 10px; margin-bottom: 10px; font-weight: bold; text-shadow: 2px 2px 0 #000; flex-wrap: wrap; justify-content: center; font-size: 18px; }
   .box { background: rgba(0,0,0,0.8); padding: 6px 14px; border-radius: 8px; border: 2px solid #0f3460; display: flex; align-items: center; gap: 5px; }
   
-  /* Contador de Bola Dourada */
   .gold-box { background: rgba(50, 40, 0, 0.9); border: 2px solid #ffd700; border-radius: 8px; padding: 4px 12px; display: flex; align-items: center; gap: 8px; }
   .gold-box img { width: 28px; height: 28px; image-rendering: pixelated; animation: pulse 1s infinite alternate; }
   @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.2); } }
 
-  /* Barra de Poder */
   .pbg { width: 100px; height: 20px; background: #333; border: 2px solid #000; border-radius: 10px; overflow: hidden; position: relative; }
   .pfill { height: 100%; width: 0%; transition: 0.1s; }
   .ptext { position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; font-size: 12px; color: white; text-shadow: 1px 1px 1px #000; }
 
-  /* Tela do Jogo */
   #container { 
     position: relative; border: 8px solid #0f3460; border-radius: 16px; background: #7ec850; overflow: hidden; 
-    width: 95vw; max-width: 1200px; /* TELA BEM MAIOR */
+    width: 95vw; max-width: 1200px; 
     box-shadow: 0 15px 40px rgba(0,0,0,0.6);
   }
   canvas { display: block; width: 100%; height: auto; image-rendering: pixelated; }
@@ -72,7 +66,6 @@
     <div class="box" style="color:#ff5555">Pokébolas: <span id="sc">0</span>/<span id="tot">0</span></div>
     <div class="box" style="color:#ff5555">Vidas: <span id="lives">❤️❤️❤️</span></div>
     
-    <!-- CONTADOR VISUAL DE BOLA DOURADA -->
     <div class="gold-box">
       <img src="https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/items/master-ball.png">
       <span style="color:#ffd700;">Evolução: <span id="gold-ui">0</span>/5</span>
@@ -102,6 +95,7 @@ const img = {
   zubat: new Image(), koffing: new Image(), jessie: new Image(), james: new Image(),
   ball: new Image(), gold: new Image()
 };
+
 img.pikachu.src="https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/25.png";
 img.raichu.src="https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/26.png";
 img.charmander.src="https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/4.png";
@@ -117,41 +111,63 @@ img.james.src="https://play.pokemonshowdown.com/sprites/trainers/james.png";
 img.ball.src="https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/items/poke-ball.png";
 img.gold.src="https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/items/master-ball.png";
 
+// ===== CARREGAMENTO À PROVA DE FALHAS =====
 let loaded = 0;
+let gameStarted = false;
 for (let k in img) { 
-  img[k].onload = () => { loaded++; if(loaded >= 14 && !started) { document.getElementById('loading').style.display='none'; document.getElementById('menu').style.display='block'; } }; 
+  img[k].onload = () => { loaded++; checkReady(); }; 
+  img[k].onerror = () => { loaded++; checkReady(); }; // Se falhar, ignora para não travar
 }
+function checkReady() {
+  if(loaded >= 14 && !gameStarted) {
+    gameStarted = true;
+    document.getElementById('loading').style.display='none'; 
+    document.getElementById('menu').style.display='block';
+  }
+}
+// Plano B: Se demorar mais de 3 segundos, abre o menu mesmo sem as imagens
+setTimeout(() => {
+  if(!gameStarted) {
+    gameStarted = true;
+    document.getElementById('loading').style.display='none'; 
+    document.getElementById('menu').style.display='block';
+  }
+}, 3000);
+// ==========================================
 
 let started = false, char = 'pikachu', isEvolved = false, goldCount = 0;
 let lvl = 1, lives = 3, score = 0, tot = 0;
-let map = [], items = [], goldBalls = [], enemies = [], rockets = [], particles = [];
+let map = [], items = [], goldBalls = [], enemies = [], rockets = [], particles = [], popupTexts = [];
 let p = { x: 0, y: 0, r: 18, spd: 3.5, timer: 0, inv: false };
 let target = { x: 0, y: 0, r: 20, active: false };
-let keys = {}, power = 0, wave = 0, cool = 0, goldTimer = 300, win = false, popupTexts = [];
+let keys = {}, power = 0, wave = 0, cool = 0, goldTimer = 300, win = false;
 
 window.onkeydown = e => { keys[e.code] = true; if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault(); };
 window.onkeyup = e => { keys[e.code] = false; };
 
 function start(c) {
-  started = true; char = c;
+  started = true; char = c; lvl = 1; isEvolved = false; goldCount = 0;
   document.getElementById('lvl').innerText = lvl;
+  document.getElementById('gold-ui').innerText = goldCount;
   document.getElementById('menu').style.display = 'none'; document.getElementById('game').style.display = 'flex';
   initLevel();
   if(!window.reqId) loop();
 }
 
 function reset() { 
-  if(lives <= 0) { lvl = 1; isEvolved = false; goldCount = 0; document.getElementById('lvl').innerText = lvl; document.getElementById('gold-ui').innerText = goldCount; } 
+  if(lives <= 0) { 
+    lvl = 1; isEvolved = false; goldCount = 0; 
+    document.getElementById('lvl').innerText = lvl; 
+    document.getElementById('gold-ui').innerText = goldCount; 
+  } 
   initLevel(); 
 }
-function nextLvl() { lvl++; document.getElementById('lvl').innerText = lvl; initLevel(); }
 
 function initLevel() {
   lives = 3; power = 0; wave = 0; cool = 0; particles = []; popupTexts = [];
-  goldBalls = []; goldTimer = 200; // Aparece mais rápido no início da fase
+  goldBalls = []; goldTimer = 300; 
   updateLives(); updatePower();
   
-  // Gera Labirinto
   map = Array.from({length: MH}, () => Array(MW).fill(1));
   let stack = [{x:1, y:1}]; map[1][1] = 0;
   let dirs = [{x:0,y:-2},{x:0,y:2},{x:-2,y:0},{x:2,y:0}];
@@ -163,7 +179,7 @@ function initLevel() {
     }
     if(nb.length) { let n = nb[Math.floor(Math.random()*nb.length)]; map[n.py][n.px]=0; map[n.y][n.x]=0; stack.push({x:n.x, y:n.y}); } else stack.pop();
   }
-  // Quebra becos
+  
   for(let r=1; r<MH-1; r++) for(let c=1; c<MW-1; c++) {
     if(map[r][c]===0) {
       let w=0, v=[];
@@ -250,26 +266,20 @@ function moveAI(e, spd, chase) {
 function update() {
   if(win) return;
   
-  // ==========================================
-  // 1. MOVIMENTO E CARREGAMENTO DE PODER CORRIGIDO
-  // ==========================================
   let dx=0, dy=0;
   if(keys['ArrowUp']) dy--; if(keys['ArrowDown']) dy++; if(keys['ArrowLeft']) dx--; if(keys['ArrowRight']) dx++;
   
-  let moveu = false; // Flag que garante que o poder só enche se sair do lugar
+  let moveu = false; // Verifica se o personagem realmente mudou de posição
 
   if(dx!==0 || dy!==0) {
     let l=Math.hypot(dx,dy); dx=(dx/l)*p.spd; dy=(dy/l)*p.spd;
     
-    // Tenta mover no eixo X
     if(!wall(p.x+dx, p.y, p.r)) { p.x+=dx; moveu = true; }
-    // Tenta mover no eixo Y
     if(!wall(p.x, p.y+dy, p.r)) { p.y+=dy; moveu = true; }
     
     if(moveu) {
       p.timer+=0.3;
       if(power<100) { 
-        // Enche mais rápido se já evoluiu
         let chargeRate = isEvolved ? 1.5 : 0.8;
         power = Math.min(100, power + chargeRate); 
         updatePower(); 
@@ -279,7 +289,6 @@ function update() {
     p.timer+=0.1;
   }
 
-  // 2. USO DO PODER
   if(cool>0) cool--;
   if(keys['Space'] && power>=100 && cool<=0) {
     power=0; cool=60; wave=10; updatePower();
@@ -295,21 +304,17 @@ function update() {
   }
   if(wave>0) { wave+=15; if(wave>T*3) wave=0; }
   
-  // Efeito visual das partículas
   for(let i=particles.length-1; i>=0; i--) {
     let pt=particles[i]; pt.x+=pt.vx; pt.y+=pt.vy; pt.vx*=0.95; pt.vy*=0.95; pt.life-=0.04;
     if(pt.life<=0) particles.splice(i,1);
   }
   
-  // Popups de texto ("+1 Bola", "EVOLUIU!")
   for(let i=popupTexts.length-1; i>=0; i--) {
     let txt = popupTexts[i]; txt.y -= 1; txt.life -= 0.02;
     if(txt.life <= 0) popupTexts.splice(i,1);
   }
 
-  // ==========================================
-  // 3. LÓGICA DAS BOLAS DOURADAS (EVOLUÇÃO)
-  // ==========================================
+  // BOLAS DOURADAS
   if(!isEvolved && goldCount < 5 && goldBalls.length === 0) {
     goldTimer--;
     if(goldTimer <= 0) {
@@ -331,11 +336,11 @@ function update() {
       goldCount++; 
       document.getElementById('gold-ui').innerText = goldCount;
       popupTexts.push({text: "+1 Bola Dourada!", x: p.x, y: p.y - 30, life: 1, color: '#ffd700'});
-      goldTimer = 500; // 8 segundos para a próxima
+      goldTimer = 300; 
       
       if(goldCount >= 5 && !isEvolved) {
         isEvolved = true; 
-        p.spd = 4.8; // Fica mais rápido
+        p.spd = 4.8; 
         power = 100; 
         updatePower();
         popupTexts.push({text: "EVOLUIU!", x: p.x, y: p.y - 50, life: 2, color: '#ffaa00'});
@@ -343,7 +348,6 @@ function update() {
     }
   }
 
-  // 4. INIMIGOS E COLETA NORMAL
   enemies.forEach(e=>{ e.tm+=0.1; moveAI(e, e.spd, false); });
   rockets.forEach(e=>{ e.tm+=0.1; moveAI(e, e.spd, true); });
   items.forEach(i=>{
@@ -371,43 +375,35 @@ function sprite(im, x, y, s, flip=false, isRocket=false) {
 }
 
 function draw() {
-  // Mapa
   for(let r=0; r<MH; r++) for(let c=0; c<MW; c++) {
     ctx.fillStyle = map[r][c]===1 ? '#4a2e15' : ((r+c)%2===0?'#8fd45a':'#83c94f');
     ctx.fillRect(c*T, r*T, T, T);
     if(map[r][c]===1) { ctx.fillStyle='#3a200d'; ctx.fillRect(c*T+4, r*T+4, T-8, T-8); }
   }
   
-  // Itens
   items.forEach(i=>{ if(!i.got) sprite(img.ball, i.x, i.y, 36); });
   
-  // Bolas Douradas
-  evoBalls = goldBalls; // alias
-  evoBalls.forEach(b=>{ 
+  goldBalls.forEach(b=>{ 
     ctx.save(); ctx.shadowColor='#ffd700'; ctx.shadowBlur=20;
     sprite(img.gold, b.x, b.y + Math.sin(Date.now()/150)*4, 46*(1+Math.sin(Date.now()/200)*0.1)); 
     ctx.restore(); 
   });
   
-  // Inimigos
   enemies.forEach(e=>{ sprite(img[e.type], e.x, e.y+Math.sin(e.tm*4)*3, 42); });
   rockets.forEach(e=>{ sprite(img[e.type], e.x, e.y, 46, e.dx===-1, true); });
   
-  // Alvo Final (Pokébola Dourada Mestra)
   if(target.active) { 
     ctx.save(); ctx.shadowColor='#ffcc00'; ctx.shadowBlur=25; 
     sprite(img.gold, target.x, target.y + Math.sin(Date.now()/150)*5, 50*(1+Math.sin(Date.now()/200)*0.15)); 
     ctx.restore(); 
   }
   
-  // Efeito de Onda do Poder
   if(wave>0) {
     ctx.save(); let col = char==='pikachu'?'255,255,0':char==='charmander'?'255,69,0':char==='squirtle'?'0,191,255':'50,205,50';
     ctx.beginPath(); ctx.arc(p.x, p.y, wave, 0, Math.PI*2); ctx.strokeStyle=`rgba(${col},${1-wave/(T*3)})`; ctx.lineWidth=8; ctx.stroke();
     ctx.beginPath(); ctx.arc(p.x, p.y, wave*0.8, 0, Math.PI*2); ctx.strokeStyle=`rgba(255,255,255,${1-wave/(T*3)})`; ctx.lineWidth=4; ctx.stroke(); ctx.restore();
   }
   
-  // Partículas do Poder
   particles.forEach(pt=>{
     ctx.globalAlpha=pt.life; ctx.fillStyle=pt.col;
     if(char==='pikachu') ctx.fillRect(pt.x-pt.sz/2, pt.y-pt.sz/2, pt.sz, pt.sz);
@@ -417,7 +413,6 @@ function draw() {
   });
   ctx.globalAlpha=1.0;
   
-  // Textos Piscando
   popupTexts.forEach(txt => {
     ctx.save();
     ctx.globalAlpha = txt.life;
@@ -431,17 +426,13 @@ function draw() {
     ctx.restore();
   });
   
-  // Jogador
   if(!(p.inv && Math.floor(Date.now()/100)%2===0)) {
     let c = char==='pikachu'?'#f0':char==='charmander'?'#f40':char==='squirtle'?'#0bf':'#3c3';
     if(power>=100 && Math.floor(Date.now()/150)%2===0) { ctx.save(); ctx.shadowColor=c; ctx.shadowBlur=20; }
     
-    // Troca o Sprite na Evolução
     let sName = char;
-    if(isEvolved) { 
-      sName = char==='pikachu'?'raichu':char==='charmander'?'charmeleon':char==='bulbasaur'?'ivysaur':'wartortle'; 
-    }
-    let size = isEvolved ? 54 : 46; // Fica maior também
+    if(isEvolved) { sName = char==='pikachu'?'raichu':char==='charmander'?'charmeleon':char==='bulbasaur'?'ivysaur':'wartortle'; }
+    let size = isEvolved ? 54 : 46; 
     sprite(img[sName], p.x, p.y+Math.sin(p.timer*3)*2, size);
     
     if(power>=100) ctx.restore();
