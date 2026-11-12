@@ -43,16 +43,16 @@
   #game-area { display: none; flex-direction: column; align-items: center; position: relative; }
   
   #hud {
-    color: #fff; font-size: 22px; font-weight: bold; margin-bottom: 10px;
+    color: #fff; font-size: 20px; font-weight: bold; margin-bottom: 5px;
     text-shadow: 2px 2px 0 #000;
-    display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center;
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: center;
   }
-  .hud-item { background: rgba(0,0,0,0.7); padding: 5px 12px; border-radius: 8px; border: 2px solid #0f3460; display: flex; align-items: center; }
+  .hud-item { background: rgba(0,0,0,0.7); padding: 5px 10px; border-radius: 8px; border: 2px solid #0f3460; display: flex; align-items: center; }
   
   /* Barra de Poder */
   .power-bar-bg {
-    width: 100px; height: 18px; background: #333; border: 2px solid #000;
-    border-radius: 10px; margin-left: 8px; overflow: hidden; position: relative;
+    width: 80px; height: 16px; background: #333; border: 2px solid #000;
+    border-radius: 10px; margin-left: 5px; overflow: hidden; position: relative;
   }
   .power-bar-fill {
     height: 100%; width: 0%; transition: width 0.1s linear, background-color 0.3s;
@@ -60,10 +60,10 @@
   .power-text {
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
     display: flex; justify-content: center; align-items: center;
-    font-size: 11px; color: white; text-shadow: 1px 1px 1px #000;
+    font-size: 10px; color: white; text-shadow: 1px 1px 1px #000;
   }
 
-  /* NOVO: Container do Jogo bem maior */
+  /* Área do Jogo Maior */
   #game-container {
     position: relative; border: 6px solid #0f3460; border-radius: 12px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.5); background: #7ec850; overflow: hidden;
@@ -71,10 +71,10 @@
   }
   #game { 
     display: block; image-rendering: pixelated; 
-    width: 98vw; /* Ocupa quase toda a largura */
-    max-width: 1000px; /* Mas não deixa ficar esticado demais */
+    width: 95vw; 
+    max-width: 1100px; 
     height: auto;
-    max-height: 85vh; 
+    max-height: 80vh; 
   }
   
   #damage-overlay {
@@ -83,17 +83,17 @@
   }
   #win, #gameover {
     position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-    background: rgba(0,0,0,0.95); color: #ffd700; padding: 25px 40px;
-    border-radius: 16px; font-size: 24px; text-align: center; display: none;
+    background: rgba(0,0,0,0.95); color: #ffd700; padding: 20px 30px;
+    border-radius: 16px; font-size: 22px; text-align: center; display: none;
     border: 4px solid #ffd700; z-index: 10; box-shadow: 0 0 20px #ffd700; white-space: nowrap;
   }
   #gameover { color: #ff5555; border-color: #ff5555; box-shadow: 0 0 20px #ff5555; }
   #win button, #gameover button {
-    margin-top: 15px; font-size: 18px; padding: 10px 20px; border-radius: 8px;
+    margin-top: 15px; font-size: 16px; padding: 10px 20px; border-radius: 8px;
     border: none; background: #ffd700; cursor: pointer; font-weight: bold;
   }
   #gameover button { background: #ff5555; color: white; }
-  .instrucoes { color: #aaa; font-size: 16px; margin-top: 10px; text-align: center; }
+  .instrucoes { color: #aaa; font-size: 14px; margin-top: 5px; text-align: center; }
 </style>
 </head>
 <body>
@@ -141,7 +141,7 @@
     <div id="win">🎉 Fase Concluída! 🎉<br><button onclick="nextLevel()">Próxima Fase</button></div>
     <div id="gameover">💀 Capturado! 💀<br><button onclick="restartLevel()">Tentar de Novo</button></div>
   </div>
-  <div class="instrucoes">Use as setas. Ande para carregar o poder, aperte <b>ESPAÇO</b> para atacar e pegue <b>5 BOLAS DOURADAS</b> para evoluir!</div>
+  <div class="instrucoes">Use as setas. Aperte <b>ESPAÇO</b> para atacar e pegue 5 <b>BOLAS DOURADAS</b> para evoluir!</div>
 </div>
 
 <script>
@@ -210,7 +210,7 @@ const MAX_POWER = 100;
 let powerWave = 0; 
 let powerCooldown = 0;
 let attackParticles = []; 
-let evoSpawnTimer = 0;
+let evoSpawnTimer = 300;
 
 function startGame(character) {
   gameStarted = true; 
@@ -245,7 +245,7 @@ function startLevel() {
   powerCooldown = 0;
   attackParticles = [];
   evoBalls = [];
-  evoSpawnTimer = 300; // Primeira bola dourada aparece depois de um tempo
+  evoSpawnTimer = 300; 
   updateLivesUI();
   updatePowerUI();
   generateMaze();
@@ -498,7 +498,6 @@ function updateEnemyGrid(entity, speed, chasePlayer = false) {
 function update() {
   if (winShown) return;
 
-  // 1. Movimento do Jogador (COM CHECAGEM CORRETA DE MOVIMENTO)
   let dx = 0, dy = 0;
   if (keys['ArrowUp'])    dy -= 1;
   if (keys['ArrowDown'])  dy += 1;
@@ -512,14 +511,13 @@ function update() {
     if (Math.abs(dx) > Math.abs(dy)) player.dir = dx > 0 ? 'right' : 'left';
     else player.dir = dy > 0 ? 'down' : 'up';
     
-    // Guarda a posição antiga para ver se realmente andou
     const oldX = player.x;
     const oldY = player.y;
 
     if (!collidesWithWall(player.x + dx, player.y, player.r)) player.x += dx;
     if (!collidesWithWall(player.x, player.y + dy, player.r)) player.y += dy;
     
-    // Só carrega o poder e anima se a posição mudou
+    // BUG FIX: Só carrega se moveu de verdade
     if (player.x !== oldX || player.y !== oldY) {
       player.animTimer += 0.3;
       if (power < MAX_POWER) {
@@ -531,7 +529,6 @@ function update() {
     player.animTimer += 0.1;
   }
 
-  // 2. Uso do Poder
   if (powerCooldown > 0) powerCooldown--;
   
   if (keys['Space'] && power >= MAX_POWER && powerCooldown <= 0) {
@@ -579,11 +576,10 @@ function update() {
     if (p.life <= 0) attackParticles.splice(i, 1);
   }
 
-  // 3. Spawn e Coleta de Bolas Douradas
+  // Spawn de Bolas Douradas
   if (!isEvolved && evoBalls.length === 0 && evoCount < 5) {
     evoSpawnTimer--;
     if (evoSpawnTimer <= 0) {
-      // Escolhe um local aleatório livre no mapa
       let attempts = 0;
       while (attempts < 100) {
         const rc = Math.floor(Math.random() * (MAP_W - 2)) + 1;
@@ -601,25 +597,24 @@ function update() {
     }
   }
 
+  // Coleta de Bolas Douradas
   for (let i = evoBalls.length - 1; i >= 0; i--) {
     const ball = evoBalls[i];
     if (Math.hypot(player.x - ball.x, player.y - ball.y) < player.r + ball.r) {
       evoBalls.splice(i, 1);
       evoCount++;
       document.getElementById('evo-count').innerText = evoCount;
-      evoSpawnTimer = 400; // Demora um pouco para a próxima aparecer
+      evoSpawnTimer = 400;
 
       if (evoCount >= 5 && !isEvolved) {
         isEvolved = true;
-        player.speed = 4.5; // Fica mais rápido
-        // Bônus: enche o poder instantaneamente
+        player.speed = 4.5; 
         power = MAX_POWER;
         updatePowerUI();
       }
     }
   }
 
-  // 4. Movimento dos Vilões
   enemies.forEach(enemy => {
     enemy.animTimer += 0.1;
     updateEnemyGrid(enemy, enemy.speed, false);
@@ -630,6 +625,23 @@ function update() {
     updateEnemyGrid(rocket, rocket.speed, true);
   });
 
-  // 5. Coleta de Pokébolas normais
   items.forEach(item => {
-    if (!item
+    if (!item.collected && Math.hypot(player.x - item.x, player.y - item.y) < player.r + item.r) {
+      item.collected = true;
+      score++;
+      document.getElementById('score').innerText = score;
+      if (score === totalItems) target.active = true;
+    }
+  });
+
+  if (!player.invulnerable) {
+    let hit = false;
+    enemies.concat(rockets).forEach(e => {
+      if (Math.hypot(player.x - e.x, player.y - e.y) < player.r + e.r - 8) hit = true;
+    });
+    if (hit) takeDamage();
+  }
+
+  if (target.active && Math.hypot(player.x - target.x, player.y - target.y) < player.r + target.r) {
+    winShown = true;
+    document.getElementById('win').style.display =
